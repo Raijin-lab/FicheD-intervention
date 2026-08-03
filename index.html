@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA - Fiche Intervention A2CIM (Modulable)</title>
+    <title>PWA - Fiche Intervention A2CIM</title>
+    
+    <!-- ================= LIENS PWA ================= -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+
     <style>
         /* =========================================
            STYLE DE L'APPLICATION (ÉCRAN / MOBILE)
@@ -133,7 +139,6 @@
             </div>
         </div>
 
-        <!-- Section Forfait Modifiable -->
         <div class="forfait-box">
             <label>Forfait d'intervention (Ligne 1)</label>
             <div class="flex-row" style="margin-bottom: 10px;">
@@ -152,7 +157,6 @@
             </div>
         </div>
 
-        <!-- Section Techniciens -->
         <div class="tech-box">
             <label>Équipe Technique (Quantités à additionner)</label>
             <div id="tech-list">
@@ -272,7 +276,6 @@
 
     <!-- ================= JAVASCRIPT ================= -->
     <script>
-        // Initialisation des dates par défaut
         let now = new Date();
         document.getElementById('input_date').valueAsDate = now;
         document.getElementById('input_date_tirage').valueAsDate = now;
@@ -280,7 +283,6 @@
         let pad = (n) => n < 10 ? '0' + n : n;
         document.getElementById('input_heure_tirage').value = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
 
-        // Remplir automatiquement le diagnostic quand la machine change
         document.getElementById('input_machine').addEventListener('input', function(e) {
             if(e.target.value) {
                 document.getElementById('input_forfait_diag').value = "Diagnostique de la machine " + e.target.value;
@@ -312,14 +314,12 @@
             
             document.getElementById('p_ref').innerText = document.getElementById('input_reference').value;
             
-            // Date de l'intervention
             let dateVal = document.getElementById('input_date').value;
             if(dateVal) {
                 let d = new Date(dateVal);
                 document.getElementById('p_date').innerText = pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear().toString().slice(-2);
             }
             
-            // Date et heure de tirage manuelle
             let dateTirageVal = document.getElementById('input_date_tirage').value;
             if(dateTirageVal) {
                 let dt = new Date(dateTirageVal);
@@ -339,7 +339,6 @@
             let tbody = document.getElementById('p_lignes_prestations');
             tbody.innerHTML = '';
             
-            // Ligne Forfait (Dynamique)
             let refForfait = document.getElementById('input_forfait_ref').value;
             let nomForfait = document.getElementById('input_forfait_nom').value;
             let diagForfait = document.getElementById('input_forfait_diag').value;
@@ -352,7 +351,6 @@
                 <td style="text-align: right;">0,00</td>
             </tr>`;
 
-            // Lignes Techniciens
             let techNames = [];
             let totalQty = 0;
             let currentUnit = "";
@@ -387,6 +385,19 @@
             document.getElementById('p_somme_reporter').innerText = totalQty > 0 ? (totalQty + (currentUnit === 'Heure(s)' ? ' H' : ' J')) : '0,00';
 
             window.print();
+        }
+
+        // ================= SERVICE WORKER POUR LA PWA =================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('Service Worker enregistré avec succès !', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Échec de l\'enregistrement du Service Worker :', error);
+                    });
+            });
         }
     </script>
 </body>
