@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA - Fiche Intervention A2CIM (Modulable)</title>
+    <style>
+        /* =========================================
+           STYLE DE L'APPLICATION (ÉCRAN / MOBILE)
+           ========================================= */
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .app-container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 14px; }
+        input[type="text"], input[type="date"], input[type="time"], input[type="number"], textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        
+        .flex-row { display: flex; gap: 10px; }
+        .flex-row > div { flex: 1; }
+
+        .tech-box, .forfait-box { border: 1px solid #6c757d; padding: 10px; border-radius: 5px; background: #f8f9fa; margin-bottom: 15px; }
+        .tech-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .tech-row input.tech-name { flex: 2; }
+        .tech-row input.tech-qty-val { flex: 1; }
+        .tech-row select.tech-qty-unit { flex: 1; }
+        .btn-add { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-remove { background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+        
+        .btn-print { background: #000; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        
+        .print-only { display: none; }
+
+        /* =========================================
+           STYLE DU DOCUMENT A IMPRIMER (PAPIER EXACT)
+           ========================================= */
+        @media print {
+            @page { size: A4; margin: 5mm; } 
+            body { background: white; padding: 0; margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: black; }
+            .app-container { display: none !important; }
+            
+            .print-only { 
+                display: flex !important; 
+                flex-direction: column; 
+                height: 285mm; 
+                padding: 5mm; 
+                box-sizing: border-box;
+            }
+            
+            .header-box { border: 1px solid black; position: relative; height: 75px; margin-bottom: 15px; flex-shrink: 0; }
+            .header-a2cim-top { position: absolute; top: 10px; left: 10px; font-size: 20px; font-weight: bold; }
+            .header-a2cim-bot { position: absolute; bottom: 10px; left: 10px; font-size: 12px; font-weight: bold; }
+            .header-title { text-align: center; font-size: 22px; font-weight: bold; margin-top: 25px; }
+
+            .info-line { display: flex; justify-content: space-between; margin-bottom: 10px; text-transform: uppercase; font-size: 11px; flex-shrink: 0; }
+            
+            .top-tables { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: flex-start; flex-shrink: 0; }
+            .top-tables table { border-collapse: collapse; border: 1px solid black; }
+            .top-tables th, .top-tables td { border: 1px solid black; padding: 4px 8px; text-align: center; }
+            .bg-grey { background-color: #e6e6e6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; }
+            
+            .table-left { width: 55%; }
+            .table-right { width: 42%; }
+            .table-right th { text-align: left; width: 25%; }
+            .table-right td { text-align: left; }
+
+            .main-table { width: 100%; border-collapse: collapse; border: 1px solid black; margin-bottom: 0; flex-shrink: 0; }
+            .main-table th { border: 1px solid black; padding: 6px; text-align: center; }
+            .main-table td { border-left: 1px solid black; border-right: 1px solid black; padding: 6px; vertical-align: top; border-bottom: none; border-top: none; }
+            .main-table tr.footer-row td { border: 1px solid black; border-top: 1px solid black; padding: 6px; }
+            
+            .col-ref { width: 18%; }
+            .col-des { width: 52%; }
+            .col-qte { width: 10%; text-align: center; }
+            .col-tar { width: 10%; text-align: right; }
+            .col-mon { width: 10%; text-align: right; }
+            
+            .travaux-box { border: 1px solid black; border-top: none; padding: 5px 10px; position: relative; margin-bottom: 15px; flex-grow: 1; display: flex; flex-direction: column; }
+            .travaux-header { display: flex; justify-content: space-between; text-decoration: underline; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
+            
+            .footer-section { flex-shrink: 0; }
+            .bottom-ref-line { border-top: 1px solid black; border-bottom: 1px solid black; padding: 5px 10px; display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 11px; }
+            
+            .signatures-container { display: flex; justify-content: space-between; font-size: 12px; }
+            .sig-block { width: 48%; }
+            .sig-title { margin-bottom: 10px; }
+            .sig-flex { display: flex; align-items: flex-start; gap: 10px; }
+            .sig-text { width: 70px; font-size: 12px; line-height: 1.2; }
+            
+            .box-client { border: 1px solid black; width: 220px; height: 70px; }
+            .box-a2cim { border: 1px solid black; width: 220px; height: 40px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= FORMULAIRE DE SAISIE ================= -->
+    <div class="app-container">
+        <h2>Fiche Intervention SAV</h2>
+        
+        <div class="form-group flex-row">
+            <div>
+                <label>N° FISAV</label>
+                <input type="text" id="input_fisav" placeholder="Ex: 26OF166">
+            </div>
+            <div>
+                <label>Référence Inter.</label>
+                <input type="text" id="input_reference" placeholder="Ex: SAV MSR">
+            </div>
+        </div>
+
+        <div class="form-group flex-row">
+            <div>
+                <label>Date (Intervention)</label>
+                <input type="date" id="input_date">
+            </div>
+            <div>
+                <label>Date/Heure (Tirage)</label>
+                <div class="flex-row">
+                    <input type="date" id="input_date_tirage" style="flex:2;">
+                    <input type="time" id="input_heure_tirage" step="1" style="flex:1;">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group flex-row">
+            <div>
+                <label>Client</label>
+                <input type="text" id="input_client" placeholder="Client">
+            </div>
+            <div>
+                <label>Machine</label>
+                <input type="text" id="input_machine" placeholder="Machine">
+            </div>
+        </div>
+
+        <!-- Section Forfait Modifiable -->
+        <div class="forfait-box">
+            <label>Forfait d'intervention (Ligne 1)</label>
+            <div class="flex-row" style="margin-bottom: 10px;">
+                <div style="flex: 1;">
+                    <span style="font-size:12px; color:#555;">FHSAV-</span>
+                    <input type="text" id="input_forfait_ref" value="DEPAN" placeholder="DEPAN">
+                </div>
+                <div style="flex: 2;">
+                    <span style="font-size:12px; color:#555;">Forfait Horaire</span>
+                    <input type="text" id="input_forfait_nom" value="SAV-Depannage" placeholder="SAV-Depannage">
+                </div>
+            </div>
+            <div>
+                <span style="font-size:12px; color:#555;">Ligne de diagnostic</span>
+                <input type="text" id="input_forfait_diag" placeholder="Ex: Diagnostique de la machine MESSER MULTITHERM">
+            </div>
+        </div>
+
+        <!-- Section Techniciens -->
+        <div class="tech-box">
+            <label>Équipe Technique (Quantités à additionner)</label>
+            <div id="tech-list">
+                <div class="tech-row">
+                    <input type="text" class="tech-name" placeholder="Nom" value="ZOUHAIR">
+                    <input type="number" class="tech-qty-val" placeholder="Qté" value="0" step="0.5">
+                    <select class="tech-qty-unit">
+                        <option value="Heure(s)">Heure(s)</option>
+                        <option value="Jour(s)">Jour(s)</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-add" onclick="addTechnician()">+ Ajouter un autre technicien</button>
+        </div>
+
+        <div class="form-group">
+            <label>Travaux Réalisés</label>
+            <textarea id="input_travaux" rows="4" placeholder="Détaillez ici..."></textarea>
+        </div>
+
+        <button class="btn-print" onclick="prepareAndPrint()">Générer et Imprimer la fiche</button>
+    </div>
+
+    <!-- ================= DOCUMENT A IMPRIMER ================= -->
+    <div class="print-only">
+        
+        <div class="header-box">
+            <div class="header-a2cim-top">A2CIM</div>
+            <div class="header-title">Fiche Intervention SAV</div>
+            <div class="header-a2cim-bot">A2CIM</div>
+        </div>
+
+        <div class="info-line">
+            <span>NOM TECHNICIEN <span id="p_nom_tech" style="margin-left:50px;"></span></span>
+            <span>Date de tirage <span id="p_date_tirage"></span> à <span id="p_heure_tirage"></span></span>
+            <span>Page : 1</span>
+        </div>
+
+        <div class="top-tables">
+            <table class="table-left">
+                <tr class="bg-grey">
+                    <th>N° FISAV</th>
+                    <th>Référence</th>
+                    <th>Date</th>
+                </tr>
+                <tr>
+                    <td id="p_fisav"></td>
+                    <td id="p_ref"></td>
+                    <td id="p_date"></td>
+                </tr>
+            </table>
+            
+            <table class="table-right">
+                <tr>
+                    <th class="bg-grey">CLIENT</th>
+                    <td id="p_client"></td>
+                </tr>
+                <tr>
+                    <th class="bg-grey">Machine</th>
+                    <td id="p_machine"></td>
+                </tr>
+            </table>
+        </div>
+
+        <table class="main-table">
+            <tr class="bg-grey">
+                <th class="col-ref">Référence</th>
+                <th class="col-des">Désignation</th>
+                <th class="col-qte">Qté</th>
+                <th class="col-tar">Tarif Unit</th>
+                <th class="col-mon">Montant</th>
+            </tr>
+            <tbody id="p_lignes_prestations">
+            </tbody>
+            <tr class="footer-row">
+                <td colspan="4" style="text-align: right; border-left:none; font-weight:bold;">A reporter</td>
+                <td id="p_somme_reporter" style="text-align: right; font-weight:bold;">0,00</td>
+            </tr>
+        </table>
+
+        <div class="travaux-box">
+            <div class="travaux-header">
+                <span>TRAVAUX REALISES :</span>
+                <span style="margin-right: 20%;">Référence Machine: <span id="p_ref_machine" style="text-decoration:none; text-transform:none;"></span></span>
+            </div>
+            <div id="p_travaux_content" style="padding-left:10px;"></div>
+        </div>
+
+        <div class="footer-section">
+            <div class="bottom-ref-line">
+                <span>Référence N° <span id="p_bottom_fisav" style="margin-left:5px;"></span></span>
+                <span>0,00</span>
+            </div>
+
+            <div class="signatures-container">
+                <div class="sig-block">
+                    <div style="text-decoration: underline; font-weight: bold; margin-bottom:15px;">CLIENT</div>
+                    <div class="sig-title">Validé Par :</div>
+                    <div class="sig-flex">
+                        <div class="sig-text">Signature<br>et Cachet</div>
+                        <div class="box-client"></div>
+                    </div>
+                </div>
+                
+                <div class="sig-block">
+                    <div style="text-decoration: underline; font-weight: bold; margin-bottom:15px;">A2CIM</div>
+                    <div class="sig-title">Réalisé Par : <span id="p_realise_par" style="font-weight:bold; margin-left:10px;"></span></div>
+                    <div class="sig-flex">
+                        <div class="sig-text">Signature</div>
+                        <div class="box-a2cim"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- ================= JAVASCRIPT ================= -->
+    <script>
+        // Initialisation des dates par défaut
+        let now = new Date();
+        document.getElementById('input_date').valueAsDate = now;
+        document.getElementById('input_date_tirage').valueAsDate = now;
+        
+        let pad = (n) => n < 10 ? '0' + n : n;
+        document.getElementById('input_heure_tirage').value = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+
+        // Remplir automatiquement le diagnostic quand la machine change
+        document.getElementById('input_machine').addEventListener('input', function(e) {
+            if(e.target.value) {
+                document.getElementById('input_forfait_diag').value = "Diagnostique de la machine " + e.target.value;
+            } else {
+                document.getElementById('input_forfait_diag').value = "";
+            }
+        });
+
+        function addTechnician() {
+            const list = document.getElementById('tech-list');
+            const row = document.createElement('div');
+            row.className = 'tech-row';
+            row.innerHTML = `
+                <input type="text" class="tech-name" placeholder="Nom">
+                <input type="number" class="tech-qty-val" placeholder="Qté" value="0" step="0.5">
+                <select class="tech-qty-unit">
+                    <option value="Heure(s)">Heure(s)</option>
+                    <option value="Jour(s)">Jour(s)</option>
+                </select>
+                <button class="btn-remove" onclick="this.parentElement.remove()">X</button>
+            `;
+            list.appendChild(row);
+        }
+
+        function prepareAndPrint() {
+            let fisav = document.getElementById('input_fisav').value;
+            document.getElementById('p_fisav').innerText = fisav;
+            document.getElementById('p_bottom_fisav').innerText = fisav;
+            
+            document.getElementById('p_ref').innerText = document.getElementById('input_reference').value;
+            
+            // Date de l'intervention
+            let dateVal = document.getElementById('input_date').value;
+            if(dateVal) {
+                let d = new Date(dateVal);
+                document.getElementById('p_date').innerText = pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear().toString().slice(-2);
+            }
+            
+            // Date et heure de tirage manuelle
+            let dateTirageVal = document.getElementById('input_date_tirage').value;
+            if(dateTirageVal) {
+                let dt = new Date(dateTirageVal);
+                document.getElementById('p_date_tirage').innerText = pad(dt.getDate()) + '/' + pad(dt.getMonth()+1) + '/' + dt.getFullYear().toString().slice(-2);
+            }
+            document.getElementById('p_heure_tirage').innerText = document.getElementById('input_heure_tirage').value;
+
+            document.getElementById('p_client').innerText = document.getElementById('input_client').value;
+            
+            let machineVal = document.getElementById('input_machine').value;
+            document.getElementById('p_machine').innerText = machineVal;
+            document.getElementById('p_ref_machine').innerText = machineVal;
+
+            let travaux = document.getElementById('input_travaux').value.replace(/\n/g, '<br>');
+            document.getElementById('p_travaux_content').innerHTML = travaux;
+
+            let tbody = document.getElementById('p_lignes_prestations');
+            tbody.innerHTML = '';
+            
+            // Ligne Forfait (Dynamique)
+            let refForfait = document.getElementById('input_forfait_ref').value;
+            let nomForfait = document.getElementById('input_forfait_nom').value;
+            let diagForfait = document.getElementById('input_forfait_diag').value;
+
+            tbody.innerHTML += `<tr>
+                <td>FHSAV-${refForfait}</td>
+                <td>Forfait Horaire ${nomForfait}<br><br><span style="padding-left:15px;">${diagForfait}</span></td>
+                <td></td>
+                <td style="text-align: right;">0,00</td>
+                <td style="text-align: right;">0,00</td>
+            </tr>`;
+
+            // Lignes Techniciens
+            let techNames = [];
+            let totalQty = 0;
+            let currentUnit = "";
+            let techRows = document.querySelectorAll('.tech-row');
+            
+            techRows.forEach((row) => {
+                let name = row.querySelector('.tech-name').value.toUpperCase();
+                let qtyVal = parseFloat(row.querySelector('.tech-qty-val').value) || 0;
+                let unit = row.querySelector('.tech-qty-unit').value;
+                
+                if (name.trim() !== '') {
+                    techNames.push(name);
+                    totalQty += qtyVal;
+                    currentUnit = unit;
+
+                    tbody.innerHTML += `<tr>
+                        <td style="padding-top: 10px;">FHTEC-EM2</td>
+                        <td style="padding-top: 10px;">Heure Technicien ${name}</td>
+                        <td style="padding-top: 10px; text-align: center;">${qtyVal} ${unit === 'Heure(s)' ? 'H' : 'J'}</td>
+                        <td style="padding-top: 10px; text-align: right;">0,00</td>
+                        <td style="padding-top: 10px; text-align: right;">0,00</td>
+                    </tr>`;
+                }
+            });
+
+            tbody.innerHTML += `<tr><td style="height: 30px;"></td><td></td><td></td><td></td><td></td></tr>`;
+
+            let allTechs = techNames.join(', ');
+            document.getElementById('p_nom_tech').innerText = allTechs;
+            document.getElementById('p_realise_par').innerText = allTechs;
+
+            document.getElementById('p_somme_reporter').innerText = totalQty > 0 ? (totalQty + (currentUnit === 'Heure(s)' ? ' H' : ' J')) : '0,00';
+
+            window.print();
+        }
+    </script>
+</body>
+</html>
