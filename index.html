@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PWA - Fiche Intervention A2CIM</title>
     
-    <!-- ================= LIENS PWA ================= -->
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
     <link rel="apple-touch-icon" href="./icon-192.png">
 
+    <!-- Bibliothèque OCR Tesseract.js (Reconnaissance de texte) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
     <style>
-        /* =========================================
-           STYLE DE L'APPLICATION (ÉCRAN / MOBILE)
-           ========================================= */
+        /* ================= STYLE DE L'APPLICATION ================= */
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
         .app-container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #333; margin-top: 0; }
@@ -23,6 +23,12 @@
         
         .flex-row { display: flex; gap: 10px; }
         .flex-row > div { flex: 1; }
+
+        /* Style de la zone Scanner */
+        .scanner-box { border: 2px dashed #0056b3; padding: 15px; border-radius: 8px; background: #eef5ff; margin-bottom: 20px; text-align: center; }
+        .scanner-box input[type="file"] { margin-bottom: 10px; }
+        .btn-scan { background: #0056b3; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        #ocrStatus { margin-top: 10px; font-size: 13px; font-weight: bold; color: #d35400; }
 
         .tech-box, .forfait-box { border: 1px solid #6c757d; padding: 10px; border-radius: 5px; background: #f8f9fa; margin-bottom: 15px; }
         .tech-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
@@ -36,62 +42,40 @@
         
         .print-only { display: none; }
 
-        /* =========================================
-           STYLE DU DOCUMENT A IMPRIMER (PAPIER EXACT)
-           ========================================= */
+        /* ================= STYLE IMPRESSION ================= */
         @media print {
             @page { size: A4; margin: 5mm; } 
             body { background: white; padding: 0; margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: black; }
             .app-container { display: none !important; }
             
-            .print-only { 
-                display: flex !important; 
-                flex-direction: column; 
-                height: 285mm; 
-                padding: 5mm; 
-                box-sizing: border-box;
-            }
-            
+            .print-only { display: flex !important; flex-direction: column; height: 285mm; padding: 5mm; box-sizing: border-box; }
             .header-box { border: 1px solid black; position: relative; height: 75px; margin-bottom: 15px; flex-shrink: 0; }
             .header-a2cim-top { position: absolute; top: 10px; left: 10px; font-size: 20px; font-weight: bold; }
             .header-a2cim-bot { position: absolute; bottom: 10px; left: 10px; font-size: 12px; font-weight: bold; }
             .header-title { text-align: center; font-size: 22px; font-weight: bold; margin-top: 25px; }
-
             .info-line { display: flex; justify-content: space-between; margin-bottom: 10px; text-transform: uppercase; font-size: 11px; flex-shrink: 0; }
-            
             .top-tables { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: flex-start; flex-shrink: 0; }
             .top-tables table { border-collapse: collapse; border: 1px solid black; }
             .top-tables th, .top-tables td { border: 1px solid black; padding: 4px 8px; text-align: center; }
             .bg-grey { background-color: #e6e6e6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; }
-            
             .table-left { width: 55%; }
             .table-right { width: 42%; }
             .table-right th { text-align: left; width: 25%; }
             .table-right td { text-align: left; }
-
             .main-table { width: 100%; border-collapse: collapse; border: 1px solid black; margin-bottom: 0; flex-shrink: 0; }
             .main-table th { border: 1px solid black; padding: 6px; text-align: center; }
             .main-table td { border-left: 1px solid black; border-right: 1px solid black; padding: 6px; vertical-align: top; border-bottom: none; border-top: none; }
             .main-table tr.footer-row td { border: 1px solid black; border-top: 1px solid black; padding: 6px; }
-            
-            .col-ref { width: 18%; }
-            .col-des { width: 52%; }
-            .col-qte { width: 10%; text-align: center; }
-            .col-tar { width: 10%; text-align: right; }
-            .col-mon { width: 10%; text-align: right; }
-            
+            .col-ref { width: 18%; } .col-des { width: 52%; } .col-qte { width: 10%; text-align: center; } .col-tar { width: 10%; text-align: right; } .col-mon { width: 10%; text-align: right; }
             .travaux-box { border: 1px solid black; border-top: none; padding: 5px 10px; position: relative; margin-bottom: 15px; flex-grow: 1; display: flex; flex-direction: column; }
             .travaux-header { display: flex; justify-content: space-between; text-decoration: underline; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
-            
             .footer-section { flex-shrink: 0; }
             .bottom-ref-line { border-top: 1px solid black; border-bottom: 1px solid black; padding: 5px 10px; display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 11px; }
-            
             .signatures-container { display: flex; justify-content: space-between; font-size: 12px; }
             .sig-block { width: 48%; }
             .sig-title { margin-bottom: 10px; }
             .sig-flex { display: flex; align-items: flex-start; gap: 10px; }
             .sig-text { width: 70px; font-size: 12px; line-height: 1.2; }
-            
             .box-client { border: 1px solid black; width: 220px; height: 70px; }
             .box-a2cim { border: 1px solid black; width: 220px; height: 40px; }
         }
@@ -102,6 +86,14 @@
     <!-- ================= FORMULAIRE DE SAISIE ================= -->
     <div class="app-container">
         <h2>Fiche Intervention SAV</h2>
+
+        <!-- Module OCR (Scanner) -->
+        <div class="scanner-box">
+            <label>📷 Scanner la fiche générée par le système</label>
+            <input type="file" id="imageInput" accept="image/*" capture="environment">
+            <button type="button" class="btn-scan" onclick="processOCR()">Lancer l'extraction automatique</button>
+            <div id="ocrStatus"></div>
+        </div>
         
         <div class="form-group flex-row">
             <div>
@@ -158,7 +150,7 @@
         </div>
 
         <div class="tech-box">
-            <label>Équipe Technique (Quantités à additionner)</label>
+            <label>Équipe Technique</label>
             <div id="tech-list">
                 <div class="tech-row">
                     <input type="text" class="tech-name" placeholder="Nom" value="ZOUHAIR">
@@ -174,7 +166,8 @@
 
         <div class="form-group">
             <label>Travaux Réalisés</label>
-            <textarea id="input_travaux" rows="4" placeholder="Détaillez ici..."></textarea>
+            <!-- Le spellcheck natif est activé ici -->
+            <textarea id="input_travaux" rows="4" placeholder="Détaillez ici..." spellcheck="true" lang="fr"></textarea>
         </div>
 
         <button class="btn-print" onclick="prepareAndPrint()">Générer et Imprimer la fiche</button>
@@ -182,61 +175,37 @@
 
     <!-- ================= DOCUMENT A IMPRIMER ================= -->
     <div class="print-only">
-        
+        <!-- ... Structure HTML d'impression identique ... -->
         <div class="header-box">
             <div class="header-a2cim-top">A2CIM</div>
             <div class="header-title">Fiche Intervention SAV</div>
             <div class="header-a2cim-bot">A2CIM</div>
         </div>
-
         <div class="info-line">
             <span>NOM TECHNICIEN <span id="p_nom_tech" style="margin-left:50px;"></span></span>
             <span>Date de tirage <span id="p_date_tirage"></span> à <span id="p_heure_tirage"></span></span>
             <span>Page : 1</span>
         </div>
-
         <div class="top-tables">
             <table class="table-left">
-                <tr class="bg-grey">
-                    <th>N° FISAV</th>
-                    <th>Référence</th>
-                    <th>Date</th>
-                </tr>
-                <tr>
-                    <td id="p_fisav"></td>
-                    <td id="p_ref"></td>
-                    <td id="p_date"></td>
-                </tr>
+                <tr class="bg-grey"><th>N° FISAV</th><th>Référence</th><th>Date</th></tr>
+                <tr><td id="p_fisav"></td><td id="p_ref"></td><td id="p_date"></td></tr>
             </table>
-            
             <table class="table-right">
-                <tr>
-                    <th class="bg-grey">CLIENT</th>
-                    <td id="p_client"></td>
-                </tr>
-                <tr>
-                    <th class="bg-grey">Machine</th>
-                    <td id="p_machine"></td>
-                </tr>
+                <tr><th class="bg-grey">CLIENT</th><td id="p_client"></td></tr>
+                <tr><th class="bg-grey">Machine</th><td id="p_machine"></td></tr>
             </table>
         </div>
-
         <table class="main-table">
             <tr class="bg-grey">
-                <th class="col-ref">Référence</th>
-                <th class="col-des">Désignation</th>
-                <th class="col-qte">Qté</th>
-                <th class="col-tar">Tarif Unit</th>
-                <th class="col-mon">Montant</th>
+                <th class="col-ref">Référence</th><th class="col-des">Désignation</th><th class="col-qte">Qté</th><th class="col-tar">Tarif Unit</th><th class="col-mon">Montant</th>
             </tr>
-            <tbody id="p_lignes_prestations">
-            </tbody>
+            <tbody id="p_lignes_prestations"></tbody>
             <tr class="footer-row">
                 <td colspan="4" style="text-align: right; border-left:none; font-weight:bold;">A reporter</td>
                 <td id="p_somme_reporter" style="text-align: right; font-weight:bold;">0,00</td>
             </tr>
         </table>
-
         <div class="travaux-box">
             <div class="travaux-header">
                 <span>TRAVAUX REALISES :</span>
@@ -244,54 +213,56 @@
             </div>
             <div id="p_travaux_content" style="padding-left:10px;"></div>
         </div>
-
         <div class="footer-section">
             <div class="bottom-ref-line">
-                <span>Référence N° <span id="p_bottom_fisav" style="margin-left:5px;"></span></span>
-                <span>0,00</span>
+                <span>Référence N° <span id="p_bottom_fisav" style="margin-left:5px;"></span></span><span>0,00</span>
             </div>
-
             <div class="signatures-container">
                 <div class="sig-block">
                     <div style="text-decoration: underline; font-weight: bold; margin-bottom:15px;">CLIENT</div>
                     <div class="sig-title">Validé Par :</div>
-                    <div class="sig-flex">
-                        <div class="sig-text">Signature<br>et Cachet</div>
-                        <div class="box-client"></div>
-                    </div>
+                    <div class="sig-flex"><div class="sig-text">Signature<br>et Cachet</div><div class="box-client"></div></div>
                 </div>
-                
                 <div class="sig-block">
                     <div style="text-decoration: underline; font-weight: bold; margin-bottom:15px;">A2CIM</div>
                     <div class="sig-title">Réalisé Par : <span id="p_realise_par" style="font-weight:bold; margin-left:10px;"></span></div>
-                    <div class="sig-flex">
-                        <div class="sig-text">Signature</div>
-                        <div class="box-a2cim"></div>
-                    </div>
+                    <div class="sig-flex"><div class="sig-text">Signature</div><div class="box-a2cim"></div></div>
                 </div>
             </div>
         </div>
-        
     </div>
 
     <!-- ================= JAVASCRIPT ================= -->
-    <script>
+    <script type="module">
+        // IMPORT FIREBASE (Conserve ton code Firestore ici)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { initializeFirestore, persistentLocalCache, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // ================= CONFIGURATION FIREBASE (À REMPLIR) =================
+        const firebaseConfig = {
+            apiKey: "VOTRE_API_KEY",
+            authDomain: "VOTRE_PROJET.firebaseapp.com",
+            projectId: "VOTRE_PROJET",
+            storageBucket: "VOTRE_PROJET.appspot.com",
+            messagingSenderId: "VOTRE_SENDER_ID",
+            appId: "VOTRE_APP_ID"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = initializeFirestore(app, { localCache: persistentLocalCache() });
+
+        // Initialisation dates
         let now = new Date();
         document.getElementById('input_date').valueAsDate = now;
         document.getElementById('input_date_tirage').valueAsDate = now;
-        
         let pad = (n) => n < 10 ? '0' + n : n;
         document.getElementById('input_heure_tirage').value = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
 
+        // Diagnostic auto
         document.getElementById('input_machine').addEventListener('input', function(e) {
-            if(e.target.value) {
-                document.getElementById('input_forfait_diag').value = "Diagnostique de la machine " + e.target.value;
-            } else {
-                document.getElementById('input_forfait_diag').value = "";
-            }
+            if(e.target.value) { document.getElementById('input_forfait_diag').value = "Diagnostique de la machine " + e.target.value; }
         });
 
-        function addTechnician() {
+        window.addTechnician = function() {
             const list = document.getElementById('tech-list');
             const row = document.createElement('div');
             row.className = 'tech-row';
@@ -305,36 +276,77 @@
                 <button class="btn-remove" onclick="this.parentElement.remove()">X</button>
             `;
             list.appendChild(row);
-        }
+        };
 
-        function prepareAndPrint() {
+        // ================= LOGIQUE OCR (SCANNER) =================
+        window.processOCR = async function() {
+            const fileInput = document.getElementById('imageInput');
+            const statusDiv = document.getElementById('ocrStatus');
+
+            if (!fileInput.files.length) {
+                alert("Sélectionnez ou prenez une photo d'abord !");
+                return;
+            }
+
+            statusDiv.style.color = "#0056b3";
+            statusDiv.innerText = "Lecture de l'image en cours... (Cela peut prendre quelques secondes)";
+
+            try {
+                // Tesseract lit l'image
+                const result = await Tesseract.recognize(fileInput.files[0], 'fra');
+                const texteExtrait = result.data.text;
+                console.log("Texte Brut Extrait : \n", texteExtrait);
+
+                // 1. Recherche du FISAV (Cherche un format comme 26OF166)
+                const regexFisav = /\b\d{2}[A-Z]{2}\d+\b/g;
+                const matchFisav = texteExtrait.match(regexFisav);
+                if (matchFisav) {
+                    document.getElementById('input_fisav').value = matchFisav[0];
+                }
+
+                // 2. Recherche de la référence SAV (Cherche SAV suivi d'un mot)
+                const regexRef = /SAV\s+[A-Z]+/g;
+                const matchRef = texteExtrait.match(regexRef);
+                if (matchRef) {
+                    document.getElementById('input_reference').value = matchRef[0];
+                }
+
+                statusDiv.style.color = "#28a745";
+                statusDiv.innerText = "Analyse terminée ! Vérifiez les cases remplies.";
+                
+            } catch (error) {
+                console.error("Erreur OCR: ", error);
+                statusDiv.style.color = "#dc3545";
+                statusDiv.innerText = "Erreur lors de la lecture de l'image.";
+            }
+        };
+
+        // ================= LOGIQUE IMPRESSION & SAUVEGARDE =================
+        window.prepareAndPrint = async function() {
             let fisav = document.getElementById('input_fisav').value;
             document.getElementById('p_fisav').innerText = fisav;
             document.getElementById('p_bottom_fisav').innerText = fisav;
             
-            document.getElementById('p_ref').innerText = document.getElementById('input_reference').value;
+            let reference = document.getElementById('input_reference').value;
+            document.getElementById('p_ref').innerText = reference;
             
             let dateVal = document.getElementById('input_date').value;
-            if(dateVal) {
-                let d = new Date(dateVal);
-                document.getElementById('p_date').innerText = pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear().toString().slice(-2);
-            }
+            if(dateVal) { let d = new Date(dateVal); document.getElementById('p_date').innerText = pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear().toString().slice(-2); }
             
             let dateTirageVal = document.getElementById('input_date_tirage').value;
-            if(dateTirageVal) {
-                let dt = new Date(dateTirageVal);
-                document.getElementById('p_date_tirage').innerText = pad(dt.getDate()) + '/' + pad(dt.getMonth()+1) + '/' + dt.getFullYear().toString().slice(-2);
-            }
-            document.getElementById('p_heure_tirage').innerText = document.getElementById('input_heure_tirage').value;
+            if(dateTirageVal) { let dt = new Date(dateTirageVal); document.getElementById('p_date_tirage').innerText = pad(dt.getDate()) + '/' + pad(dt.getMonth()+1) + '/' + dt.getFullYear().toString().slice(-2); }
+            let heureTirage = document.getElementById('input_heure_tirage').value;
+            document.getElementById('p_heure_tirage').innerText = heureTirage;
 
-            document.getElementById('p_client').innerText = document.getElementById('input_client').value;
+            let client = document.getElementById('input_client').value;
+            document.getElementById('p_client').innerText = client;
             
-            let machineVal = document.getElementById('input_machine').value;
-            document.getElementById('p_machine').innerText = machineVal;
-            document.getElementById('p_ref_machine').innerText = machineVal;
+            let machine = document.getElementById('input_machine').value;
+            document.getElementById('p_machine').innerText = machine;
+            document.getElementById('p_ref_machine').innerText = machine;
 
-            let travaux = document.getElementById('input_travaux').value.replace(/\n/g, '<br>');
-            document.getElementById('p_travaux_content').innerHTML = travaux;
+            let travauxBruts = document.getElementById('input_travaux').value;
+            document.getElementById('p_travaux_content').innerHTML = travauxBruts.replace(/\n/g, '<br>');
 
             let tbody = document.getElementById('p_lignes_prestations');
             tbody.innerHTML = '';
@@ -343,62 +355,40 @@
             let nomForfait = document.getElementById('input_forfait_nom').value;
             let diagForfait = document.getElementById('input_forfait_diag').value;
 
-            tbody.innerHTML += `<tr>
-                <td>FHSAV-${refForfait}</td>
-                <td>Forfait Horaire ${nomForfait}<br><br><span style="padding-left:15px;">${diagForfait}</span></td>
-                <td></td>
-                <td style="text-align: right;">0,00</td>
-                <td style="text-align: right;">0,00</td>
-            </tr>`;
+            tbody.innerHTML += `<tr><td>FHSAV-${refForfait}</td><td>Forfait Horaire ${nomForfait}<br><br><span style="padding-left:15px;">${diagForfait}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>`;
 
-            let techNames = [];
-            let totalQty = 0;
-            let currentUnit = "";
-            let techRows = document.querySelectorAll('.tech-row');
-            
-            techRows.forEach((row) => {
+            let techNames = []; let detailTechniciens = []; let totalQty = 0; let currentUnit = "";
+            document.querySelectorAll('.tech-row').forEach((row) => {
                 let name = row.querySelector('.tech-name').value.toUpperCase();
                 let qtyVal = parseFloat(row.querySelector('.tech-qty-val').value) || 0;
                 let unit = row.querySelector('.tech-qty-unit').value;
-                
                 if (name.trim() !== '') {
-                    techNames.push(name);
-                    totalQty += qtyVal;
-                    currentUnit = unit;
-
-                    tbody.innerHTML += `<tr>
-                        <td style="padding-top: 10px;">FHTEC-EM2</td>
-                        <td style="padding-top: 10px;">Heure Technicien ${name}</td>
-                        <td style="padding-top: 10px; text-align: center;">${qtyVal} ${unit === 'Heure(s)' ? 'H' : 'J'}</td>
-                        <td style="padding-top: 10px; text-align: right;">0,00</td>
-                        <td style="padding-top: 10px; text-align: right;">0,00</td>
-                    </tr>`;
+                    techNames.push(name); detailTechniciens.push({ nom: name, quantite: qtyVal, unite: unit }); totalQty += qtyVal; currentUnit = unit;
+                    tbody.innerHTML += `<tr><td style="padding-top: 10px;">FHTEC-EM2</td><td style="padding-top: 10px;">Heure Technicien ${name}</td><td style="padding-top: 10px; text-align: center;">${qtyVal} ${unit === 'Heure(s)' ? 'H' : 'J'}</td><td style="padding-top: 10px; text-align: right;">0,00</td><td style="padding-top: 10px; text-align: right;">0,00</td></tr>`;
                 }
             });
-
             tbody.innerHTML += `<tr><td style="height: 30px;"></td><td></td><td></td><td></td><td></td></tr>`;
 
             let allTechs = techNames.join(', ');
             document.getElementById('p_nom_tech').innerText = allTechs;
             document.getElementById('p_realise_par').innerText = allTechs;
+            
+            let totalFormatte = totalQty > 0 ? (totalQty + (currentUnit === 'Heure(s)' ? ' H' : ' J')) : '0,00';
+            document.getElementById('p_somme_reporter').innerText = totalFormatte;
 
-            document.getElementById('p_somme_reporter').innerText = totalQty > 0 ? (totalQty + (currentUnit === 'Heure(s)' ? ' H' : ' J')) : '0,00';
+            const historiqueData = {
+                numero_fisav: fisav, reference_intervention: reference, client: client, machine: machine,
+                date_intervention: dateVal, date_tirage: dateTirageVal + " " + heureTirage, diagnostic: diagForfait,
+                travaux_realises: travauxBruts, techniciens_intervenants: detailTechniciens, total_temps: totalFormatte, timestamp_creation: new Date()
+            };
+
+            try { await addDoc(collection(db, "historique_interventions"), historiqueData); } catch (error) { console.error("Erreur sync :", error); }
 
             window.print();
-        }
+        };
 
-        // ================= SERVICE WORKER POUR LA PWA =================
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(registration => {
-                        console.log('Service Worker enregistré avec succès !', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('Échec de l\'enregistrement du Service Worker :', error);
-                    });
-            });
-        }
+        // PWA SW
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
     </script>
 </body>
 </html>
