@@ -53,8 +53,10 @@
         .btn-print { background: #000; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 10px; }
         
         /* Style Historique */
+        .history-controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        #search-client { flex: 1; min-width: 200px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
         .history-table-container { overflow-x: auto; }
-        table.history-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        table.history-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 13px; }
         .history-table th, .history-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         .history-table th { background-color: #f4f7f6; font-weight: bold; }
         .history-table tr:hover { background-color: #f1f1f1; }
@@ -186,7 +188,12 @@
         <!-- ================= VUE : HISTORIQUE ================= -->
         <div id="view-history" style="display: none;">
             <h3>Dernières interventions validées</h3>
-            <button class="btn-scan" onclick="loadHistory()" style="margin-bottom: 15px;">🔄 Rafraîchir la liste</button>
+            
+            <div class="history-controls">
+                <button class="btn-scan" onclick="loadHistory()">🔄 Rafraîchir</button>
+                <input type="text" id="search-client" placeholder="🔍 Rechercher par nom de client..." onkeyup="filterHistory()">
+            </div>
+
             <div class="history-table-container">
                 <table class="history-table">
                     <thead>
@@ -253,7 +260,7 @@
         const auth = getAuth(app);
 
         let currentUserEmail = "";
-        let loadedHistoryData = []; // Stocke les données de l'historique
+        let loadedHistoryData = []; 
 
         // ================= GESTION NAVIGATION =================
         window.switchView = function(view) {
@@ -267,7 +274,7 @@
                 document.getElementById('view-history').style.display = 'block';
                 document.getElementById('btn-nav-form').className = 'btn-nav-inactive';
                 document.getElementById('btn-nav-history').className = 'btn-nav-active';
-                window.loadHistory(); // Charge la base de données au clic
+                window.loadHistory(); 
             }
         };
 
@@ -294,13 +301,12 @@
         };
         window.logout = function() { signOut(auth); };
 
-        // ================= RECUPERATION HISTORIQUE CLOUD =================
+        // ================= RECUPERATION HISTORIQUE =================
         window.loadHistory = async function() {
             const tbody = document.getElementById('history-tbody');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Recherche dans le cloud...</td></tr>';
             
             try {
-                // Requête : chercher dans "historique_interventions" et trier par date décroissante
                 const q = query(collection(db, "historique_interventions"), orderBy("timestamp_creation", "desc"));
                 const querySnapshot = await getDocs(q);
                 
@@ -317,22 +323,19 @@
                     const data = doc.data();
                     loadedHistoryData.push(data);
                     
-                    // Formater les noms des techniciens pour le tableau
                     let nomsTechs = data.techniciens_intervenants ? data.techniciens_intervenants.map(t => t.nom).join(', ') : data.cree_par;
 
-                    // Formater la date pour affichage
                     let dateAffiche = "";
                     if(data.date_intervention) {
                         let d = new Date(data.date_intervention);
                         dateAffiche = (d.getDate()<10?'0':'') + d.getDate() + '/' + ((d.getMonth()+1)<10?'0':'') + (d.getMonth()+1) + '/' + d.getFullYear();
                     }
 
-                    // Création de la ligne
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${dateAffiche}</td>
                         <td><strong>${data.numero_fisav || '-'}</strong></td>
-                        <td>${data.client || '-'}</td>
+                        <td class="td-client">${data.client || '-'}</td>
                         <td>${data.machine || '-'}</td>
                         <td>${nomsTechs}</td>
                         <td><button class="btn-reprint" onclick="reprintFiche(${index})">🖨️ Imprimer</button></td>
@@ -342,17 +345,36 @@
                 });
 
             } catch (error) {
-                console.error("Erreur de chargement de l'historique :", error);
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erreur de connexion cloud. Vérifiez votre réseau.</td></tr>';
+                console.error("Erreur historique :", error);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erreur de connexion cloud.</td></tr>';
             }
         };
 
-        // ================= RE-IMPRESSION D'UNE ANCIENNE FICHE =================
+        // ================= RECHERCHE PAR CLIENT =================
+        window.filterHistory = function() {
+            const filter = document.getElementById('search-client').value.toUpperCase();
+            const tbody = document.getElementById('history-tbody');
+            const trs = tbody.getElementsByTagName('tr');
+
+            for (let i = 0; i < trs.length; i++) {
+                // La colonne Client est la 3ème colonne (index 2)
+                const tdClient = trs[i].getElementsByTagName('td')[2];
+                if (tdClient) {
+                    const txtValue = tdClient.textContent || tdClient.innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        trs[i].style.display = "";
+                    } else {
+                        trs[i].style.display = "none";
+                    }
+                }
+            }
+        };
+
+        // ================= RE-IMPRESSION =================
         window.reprintFiche = function(index) {
             const data = loadedHistoryData[index];
             if(!data) return;
 
-            // Remplissage invisible du modèle d'impression avec les anciennes données
             document.getElementById('p_fisav').innerText = data.numero_fisav || '';
             document.getElementById('p_bottom_fisav').innerText = data.numero_fisav || '';
             document.getElementById('p_ref').innerText = data.reference_intervention || '';
@@ -362,7 +384,6 @@
                 document.getElementById('p_date').innerText = (d.getDate()<10?'0':'') + d.getDate() + '/' + ((d.getMonth()+1)<10?'0':'') + (d.getMonth()+1) + '/' + d.getFullYear().toString().slice(-2);
             }
             
-            // Pour le tirage on sépare la chaine enregistrée
             if(data.date_tirage) {
                 let parts = data.date_tirage.split(' ');
                 if(parts.length > 0) {
@@ -377,10 +398,8 @@
             document.getElementById('p_ref_machine').innerText = data.machine || '';
             document.getElementById('p_travaux_content').innerHTML = (data.travaux_realises || '').replace(/\n/g, '<br>');
             
-            // Reconstruction du tableau des prestations
             let tbody = document.getElementById('p_lignes_prestations'); 
             tbody.innerHTML = '';
-            
             tbody.innerHTML += `<tr><td>FHSAV-DEPAN</td><td>Forfait Horaire SAV-Depannage<br><br><span style="padding-left:15px;">${data.diagnostic || ''}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>`;
             
             let allTechs = [];
@@ -397,11 +416,10 @@
             document.getElementById('p_realise_par').innerText = nomsFinaux;
             document.getElementById('p_somme_reporter').innerText = data.total_temps || '0,00';
 
-            // Lancement de l'impression
             window.print();
         };
 
-        // ================= INITIALISATION FORMULAIRE (Dates) =================
+        // ================= INITIALISATION FORMULAIRE =================
         let now = new Date();
         document.getElementById('input_date').valueAsDate = now;
         document.getElementById('input_date_tirage').valueAsDate = now;
@@ -420,7 +438,7 @@
             list.appendChild(row);
         };
 
-        // ================= OCR & SAUVEGARDE NOUVELLE FICHE =================
+        // ================= OCR =================
         window.processOCR = async function() {
             const fileInput = document.getElementById('imageInput');
             const statusDiv = document.getElementById('ocrStatus');
@@ -439,6 +457,7 @@
             }
         };
 
+        // ================= GENERATION ET SAUVEGARDE =================
         window.prepareAndPrint = async function() {
             let fisav = document.getElementById('input_fisav').value;
             document.getElementById('p_fisav').innerText = fisav; document.getElementById('p_bottom_fisav').innerText = fisav;
