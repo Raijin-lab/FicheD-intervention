@@ -3,20 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA - Fiche Intervention A2CIM</title>
+    <title>PWA - Fiche Intervention A2CIM (Sécurisée)</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
     <link rel="apple-touch-icon" href="./icon-192.png">
 
-    <!-- Bibliothèque OCR Tesseract.js (Reconnaissance de texte) -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- Bibliothèque OCR Tesseract.js -->
+    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=vLg6AdSC5nIUq70KaS9CWEHZAhiQzBxlnPHSFq6bxyfWTE-Py1gRfiDkcTJR37ujXWjDHmYu2TM4MHic81wYA38r5V_I61hXuA3nkuEdvmpJMohaXz-kxREQhzBLvli3xCziRlbjtdI82tdBlniopXLNQrhkPW9vv8faaJR68yYME1PAk__jYXnNxbh0YRdcEsxt6z9w_EOXsoyZf8dxkBEmlOtu7ZxRnq72jcOOgYfNapexlKNgPIfg1P6mqJUrt4Ec1WcLgjJ-nsRIzoo_3g03E9nsOvi6wPkRckDpMIWB56fu7rbCDbzeuqylcWhpxcExfTSd7_nvxnkOeTingg" charset="UTF-8"></script><link rel="stylesheet" crossorigin="anonymous" href="https://gc.kis.v2.scr.kaspersky-labs.com/E3E8934C-235A-4B0E-825A-35A08381A191/abn/main.css?attr=aHR0cHM6Ly9jb250cmlidXRpb24udXNlcmNvbnRlbnQuZ29vZ2xlLmNvbS9kb3dubG9hZD9jPUNneGlZWEprWDNOMGIzSmhaMlVTVUJJTmNtVnpjRzl1YzJWZlpHRjBZUm9fQ2pCaE9XVTNaVFF6WVdFd016WXhPR05oTURBd05qVmhNVFpsT0RWbE16a3dOakEwWVRRMU1tWmpPRGt6TXpNNVpXTVNDeElIRUt5ZXc2SERHUmdCJmZpbGVuYW1lPWluZGV4Lmh0bWwmb3BpPTEwMzEzNTA1MCZhdXRodXNlcj0x"/><script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
         /* ================= STYLE DE L'APPLICATION ================= */
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
         .app-container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #333; margin-top: 0; }
+        
+        /* Style Login */
+        #login-container { margin-top: 50px; text-align: center; }
+        #login-container input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn-login { background: #0056b3; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; }
+        #login-error { color: #dc3545; margin-top: 10px; font-weight: bold; display: none; }
+        
+        /* En-tête de l'app avec déconnexion */
+        .app-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eef5ff; padding-bottom: 10px; margin-bottom: 20px; }
+        .btn-logout { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 14px; }
         input[type="text"], input[type="date"], input[type="time"], input[type="number"], textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
@@ -24,7 +35,6 @@
         .flex-row { display: flex; gap: 10px; }
         .flex-row > div { flex: 1; }
 
-        /* Style de la zone Scanner */
         .scanner-box { border: 2px dashed #0056b3; padding: 15px; border-radius: 8px; background: #eef5ff; margin-bottom: 20px; text-align: center; }
         .scanner-box input[type="file"] { margin-bottom: 10px; }
         .btn-scan { background: #0056b3; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
@@ -46,7 +56,7 @@
         @media print {
             @page { size: A4; margin: 5mm; } 
             body { background: white; padding: 0; margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: black; }
-            .app-container { display: none !important; }
+            .app-container, #login-container { display: none !important; }
             
             .print-only { display: flex !important; flex-direction: column; height: 285mm; padding: 5mm; box-sizing: border-box; }
             .header-box { border: 1px solid black; position: relative; height: 75px; margin-bottom: 15px; flex-shrink: 0; }
@@ -83,11 +93,25 @@
 </head>
 <body>
 
-    <!-- ================= FORMULAIRE DE SAISIE ================= -->
-    <div class="app-container">
-        <h2>Fiche Intervention SAV</h2>
+    <!-- ================= ECRAN DE CONNEXION ================= -->
+    <div id="login-container" class="app-container">
+        <h2>🔒 Portail Techniciens A2CIM</h2>
+        <p style="color: #666; margin-bottom: 20px;">Veuillez vous identifier pour accéder à l'historique et générer une fiche.</p>
+        
+        <input type="email" id="auth_email" placeholder="Adresse Email">
+        <input type="password" id="auth_password" placeholder="Mot de passe">
+        
+        <button class="btn-login" onclick="login()">Se Connecter</button>
+        <div id="login-error">Identifiants incorrects.</div>
+    </div>
 
-        <!-- Module OCR (Scanner) -->
+    <!-- ================= APPLICATION PRINCIPALE (Masquée par défaut) ================= -->
+    <div id="main-app" class="app-container" style="display: none;">
+        <div class="app-header">
+            <h2>Fiche Intervention SAV</h2>
+            <button class="btn-logout" onclick="logout()">Déconnexion</button>
+        </div>
+
         <div class="scanner-box">
             <label>📷 Scanner la fiche générée par le système</label>
             <input type="file" id="imageInput" accept="image/*" capture="environment">
@@ -96,21 +120,12 @@
         </div>
         
         <div class="form-group flex-row">
-            <div>
-                <label>N° FISAV</label>
-                <input type="text" id="input_fisav" placeholder="Ex: 26OF166">
-            </div>
-            <div>
-                <label>Référence Inter.</label>
-                <input type="text" id="input_reference" placeholder="Ex: SAV MSR">
-            </div>
+            <div><label>N° FISAV</label><input type="text" id="input_fisav" placeholder="Ex: 26OF166"></div>
+            <div><label>Référence Inter.</label><input type="text" id="input_reference" placeholder="Ex: SAV MSR"></div>
         </div>
 
         <div class="form-group flex-row">
-            <div>
-                <label>Date (Intervention)</label>
-                <input type="date" id="input_date">
-            </div>
+            <div><label>Date (Intervention)</label><input type="date" id="input_date"></div>
             <div>
                 <label>Date/Heure (Tirage)</label>
                 <div class="flex-row">
@@ -121,31 +136,19 @@
         </div>
 
         <div class="form-group flex-row">
-            <div>
-                <label>Client</label>
-                <input type="text" id="input_client" placeholder="Client">
-            </div>
-            <div>
-                <label>Machine</label>
-                <input type="text" id="input_machine" placeholder="Machine">
-            </div>
+            <div><label>Client</label><input type="text" id="input_client" placeholder="Client"></div>
+            <div><label>Machine</label><input type="text" id="input_machine" placeholder="Machine"></div>
         </div>
 
         <div class="forfait-box">
             <label>Forfait d'intervention (Ligne 1)</label>
             <div class="flex-row" style="margin-bottom: 10px;">
-                <div style="flex: 1;">
-                    <span style="font-size:12px; color:#555;">FHSAV-</span>
-                    <input type="text" id="input_forfait_ref" value="DEPAN" placeholder="DEPAN">
-                </div>
-                <div style="flex: 2;">
-                    <span style="font-size:12px; color:#555;">Forfait Horaire</span>
-                    <input type="text" id="input_forfait_nom" value="SAV-Depannage" placeholder="SAV-Depannage">
-                </div>
+                <div style="flex: 1;"><span style="font-size:12px; color:#555;">FHSAV-</span><input type="text" id="input_forfait_ref" value="DEPAN" placeholder="DEPAN"></div>
+                <div style="flex: 2;"><span style="font-size:12px; color:#555;">Forfait Horaire</span><input type="text" id="input_forfait_nom" value="SAV-Depannage" placeholder="SAV-Depannage"></div>
             </div>
             <div>
                 <span style="font-size:12px; color:#555;">Ligne de diagnostic</span>
-                <input type="text" id="input_forfait_diag" placeholder="Ex: Diagnostique de la machine MESSER MULTITHERM">
+                <input type="text" id="input_forfait_diag" placeholder="Ex: Diagnostique de la machine">
             </div>
         </div>
 
@@ -153,7 +156,8 @@
             <label>Équipe Technique</label>
             <div id="tech-list">
                 <div class="tech-row">
-                    <input type="text" class="tech-name" placeholder="Nom" value="ZOUHAIR">
+                    <!-- Prérempli dynamiquement lors de la connexion -->
+                    <input type="text" class="tech-name" id="default_tech_name" placeholder="Nom">
                     <input type="number" class="tech-qty-val" placeholder="Qté" value="0" step="0.5">
                     <select class="tech-qty-unit">
                         <option value="Heure(s)">Heure(s)</option>
@@ -166,7 +170,6 @@
 
         <div class="form-group">
             <label>Travaux Réalisés</label>
-            <!-- Le spellcheck natif est activé ici -->
             <textarea id="input_travaux" rows="4" placeholder="Détaillez ici..." spellcheck="true" lang="fr"></textarea>
         </div>
 
@@ -175,89 +178,102 @@
 
     <!-- ================= DOCUMENT A IMPRIMER ================= -->
     <div class="print-only">
-        <!-- ... Structure HTML d'impression identique ... -->
-        <div class="header-box">
-            <div class="header-a2cim-top">A2CIM</div>
-            <div class="header-title">Fiche Intervention SAV</div>
-            <div class="header-a2cim-bot">A2CIM</div>
-        </div>
-        <div class="info-line">
-            <span>NOM TECHNICIEN <span id="p_nom_tech" style="margin-left:50px;"></span></span>
-            <span>Date de tirage <span id="p_date_tirage"></span> à <span id="p_heure_tirage"></span></span>
-            <span>Page : 1</span>
-        </div>
+        <div class="header-box"><div class="header-a2cim-top">A2CIM</div><div class="header-title">Fiche Intervention SAV</div><div class="header-a2cim-bot">A2CIM</div></div>
+        <div class="info-line"><span>NOM TECHNICIEN <span id="p_nom_tech" style="margin-left:50px;"></span></span><span>Date de tirage <span id="p_date_tirage"></span> à <span id="p_heure_tirage"></span></span><span>Page : 1</span></div>
         <div class="top-tables">
-            <table class="table-left">
-                <tr class="bg-grey"><th>N° FISAV</th><th>Référence</th><th>Date</th></tr>
-                <tr><td id="p_fisav"></td><td id="p_ref"></td><td id="p_date"></td></tr>
-            </table>
-            <table class="table-right">
-                <tr><th class="bg-grey">CLIENT</th><td id="p_client"></td></tr>
-                <tr><th class="bg-grey">Machine</th><td id="p_machine"></td></tr>
-            </table>
+            <table class="table-left"><tr class="bg-grey"><th>N° FISAV</th><th>Référence</th><th>Date</th></tr><tr><td id="p_fisav"></td><td id="p_ref"></td><td id="p_date"></td></tr></table>
+            <table class="table-right"><tr><th class="bg-grey">CLIENT</th><td id="p_client"></td></tr><tr><th class="bg-grey">Machine</th><td id="p_machine"></td></tr></table>
         </div>
         <table class="main-table">
-            <tr class="bg-grey">
-                <th class="col-ref">Référence</th><th class="col-des">Désignation</th><th class="col-qte">Qté</th><th class="col-tar">Tarif Unit</th><th class="col-mon">Montant</th>
-            </tr>
+            <tr class="bg-grey"><th class="col-ref">Référence</th><th class="col-des">Désignation</th><th class="col-qte">Qté</th><th class="col-tar">Tarif Unit</th><th class="col-mon">Montant</th></tr>
             <tbody id="p_lignes_prestations"></tbody>
-            <tr class="footer-row">
-                <td colspan="4" style="text-align: right; border-left:none; font-weight:bold;">A reporter</td>
-                <td id="p_somme_reporter" style="text-align: right; font-weight:bold;">0,00</td>
-            </tr>
+            <tr class="footer-row"><td colspan="4" style="text-align: right; border-left:none; font-weight:bold;">A reporter</td><td id="p_somme_reporter" style="text-align: right; font-weight:bold;">0,00</td></tr>
         </table>
         <div class="travaux-box">
-            <div class="travaux-header">
-                <span>TRAVAUX REALISES :</span>
-                <span style="margin-right: 20%;">Référence Machine: <span id="p_ref_machine" style="text-decoration:none; text-transform:none;"></span></span>
-            </div>
+            <div class="travaux-header"><span>TRAVAUX REALISES :</span><span style="margin-right: 20%;">Référence Machine: <span id="p_ref_machine" style="text-decoration:none; text-transform:none;"></span></span></div>
             <div id="p_travaux_content" style="padding-left:10px;"></div>
         </div>
         <div class="footer-section">
-            <div class="bottom-ref-line">
-                <span>Référence N° <span id="p_bottom_fisav" style="margin-left:5px;"></span></span><span>0,00</span>
-            </div>
+            <div class="bottom-ref-line"><span>Référence N° <span id="p_bottom_fisav" style="margin-left:5px;"></span></span><span>0,00</span></div>
             <div class="signatures-container">
-                <div class="sig-block">
-                    <div style="text-decoration: underline; font-weight: bold; margin-bottom:15px;">CLIENT</div>
-                    <div class="sig-title">Validé Par :</div>
-                    <div class="sig-flex"><div class="sig-text">Signature<br>et Cachet</div><div class="box-client"></div></div>
-                </div>
-                <div class="sig-block">
-                    <div style="text-decoration: underline; font-weight: bold; margin-bottom:15px;">A2CIM</div>
-                    <div class="sig-title">Réalisé Par : <span id="p_realise_par" style="font-weight:bold; margin-left:10px;"></span></div>
-                    <div class="sig-flex"><div class="sig-text">Signature</div><div class="box-a2cim"></div></div>
-                </div>
+                <div class="sig-block"><div style="text-decoration: underline; font-weight: bold; margin-bottom:15px;">CLIENT</div><div class="sig-title">Validé Par :</div><div class="sig-flex"><div class="sig-text">Signature<br>et Cachet</div><div class="box-client"></div></div></div>
+                <div class="sig-block"><div style="text-decoration: underline; font-weight: bold; margin-bottom:15px;">A2CIM</div><div class="sig-title">Réalisé Par : <span id="p_realise_par" style="font-weight:bold; margin-left:10px;"></span></div><div class="sig-flex"><div class="sig-text">Signature</div><div class="box-a2cim"></div></div></div>
             </div>
         </div>
     </div>
 
-    <!-- ================= JAVASCRIPT ================= -->
+    <!-- ================= JAVASCRIPT & FIREBASE ================= -->
     <script type="module">
-        // IMPORT FIREBASE (Conserve ton code Firestore ici)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { initializeFirestore, persistentLocalCache, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        // Import des modules d'authentification
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        // ================= CONFIGURATION FIREBASE (À REMPLIR) =================
+        // ================= CONFIGURATION FIREBASE =================
         const firebaseConfig = {
-            apiKey: "VOTRE_API_KEY",
-            authDomain: "VOTRE_PROJET.firebaseapp.com",
-            projectId: "VOTRE_PROJET",
-            storageBucket: "VOTRE_PROJET.appspot.com",
-            messagingSenderId: "VOTRE_SENDER_ID",
-            appId: "VOTRE_APP_ID"
+            apiKey: "AIzaSyCv2FU2MgqO2XZl4G8R3WHpC9wMg15yylE",
+            authDomain: "a2cim-sav.firebaseapp.com",
+            projectId: "a2cim-sav",
+            storageBucket: "a2cim-sav.firebasestorage.app",
+            messagingSenderId: "615344339452",
+            appId: "1:615344339452:web:f621ff3ba38f05920e9a79"
         };
         const app = initializeApp(firebaseConfig);
         const db = initializeFirestore(app, { localCache: persistentLocalCache() });
+        const auth = getAuth(app);
 
-        // Initialisation dates
+        // Variable globale pour stocker l'email de l'utilisateur connecté
+        let currentUserEmail = "";
+
+        // ================= GESTION DE LA CONNEXION =================
+        // Écouteur d'état (Vérifie si on est déjà connecté en ouvrant l'app)
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Utilisateur connecté
+                currentUserEmail = user.email;
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                
+                // On préremplit le nom du technicien avec le début de son email (ex: zouhair@a2cim.com -> ZOUHAIR)
+                let nomExtrait = user.email.split('@')[0].toUpperCase();
+                document.getElementById('default_tech_name').value = nomExtrait;
+            } else {
+                // Utilisateur déconnecté
+                document.getElementById('login-container').style.display = 'block';
+                document.getElementById('main-app').style.display = 'none';
+            }
+        });
+
+        window.login = function() {
+            const email = document.getElementById('auth_email').value;
+            const password = document.getElementById('auth_password').value;
+            const errorDiv = document.getElementById('login-error');
+            
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    errorDiv.style.display = 'none'; // Succès, onAuthStateChanged prend le relais
+                })
+                .catch((error) => {
+                    console.error("Erreur de connexion:", error);
+                    errorDiv.style.display = 'block';
+                });
+        };
+
+        window.logout = function() {
+            signOut(auth).then(() => {
+                console.log("Déconnecté");
+            }).catch((error) => {
+                console.error("Erreur de déconnexion", error);
+            });
+        };
+
+        // ================= LOGIQUE FORMULAIRE & OCR =================
         let now = new Date();
         document.getElementById('input_date').valueAsDate = now;
         document.getElementById('input_date_tirage').valueAsDate = now;
         let pad = (n) => n < 10 ? '0' + n : n;
         document.getElementById('input_heure_tirage').value = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
 
-        // Diagnostic auto
         document.getElementById('input_machine').addEventListener('input', function(e) {
             if(e.target.value) { document.getElementById('input_forfait_diag').value = "Diagnostique de la machine " + e.target.value; }
         });
@@ -266,97 +282,46 @@
             const list = document.getElementById('tech-list');
             const row = document.createElement('div');
             row.className = 'tech-row';
-            row.innerHTML = `
-                <input type="text" class="tech-name" placeholder="Nom">
-                <input type="number" class="tech-qty-val" placeholder="Qté" value="0" step="0.5">
-                <select class="tech-qty-unit">
-                    <option value="Heure(s)">Heure(s)</option>
-                    <option value="Jour(s)">Jour(s)</option>
-                </select>
-                <button class="btn-remove" onclick="this.parentElement.remove()">X</button>
-            `;
+            row.innerHTML = `<input type="text" class="tech-name" placeholder="Nom"><input type="number" class="tech-qty-val" placeholder="Qté" value="0" step="0.5"><select class="tech-qty-unit"><option value="Heure(s)">Heure(s)</option><option value="Jour(s)">Jour(s)</option></select><button class="btn-remove" onclick="this.parentElement.remove()">X</button>`;
             list.appendChild(row);
         };
 
-        // ================= LOGIQUE OCR (SCANNER) =================
         window.processOCR = async function() {
             const fileInput = document.getElementById('imageInput');
             const statusDiv = document.getElementById('ocrStatus');
-
-            if (!fileInput.files.length) {
-                alert("Sélectionnez ou prenez une photo d'abord !");
-                return;
-            }
-
-            statusDiv.style.color = "#0056b3";
-            statusDiv.innerText = "Lecture de l'image en cours... (Cela peut prendre quelques secondes)";
-
+            if (!fileInput.files.length) { alert("Sélectionnez ou prenez une photo d'abord !"); return; }
+            statusDiv.style.color = "#0056b3"; statusDiv.innerText = "Lecture de l'image en cours...";
             try {
-                // Tesseract lit l'image
                 const result = await Tesseract.recognize(fileInput.files[0], 'fra');
                 const texteExtrait = result.data.text;
-                console.log("Texte Brut Extrait : \n", texteExtrait);
-
-                // 1. Recherche du FISAV (Cherche un format comme 26OF166)
-                const regexFisav = /\b\d{2}[A-Z]{2}\d+\b/g;
-                const matchFisav = texteExtrait.match(regexFisav);
-                if (matchFisav) {
-                    document.getElementById('input_fisav').value = matchFisav[0];
-                }
-
-                // 2. Recherche de la référence SAV (Cherche SAV suivi d'un mot)
-                const regexRef = /SAV\s+[A-Z]+/g;
-                const matchRef = texteExtrait.match(regexRef);
-                if (matchRef) {
-                    document.getElementById('input_reference').value = matchRef[0];
-                }
-
-                statusDiv.style.color = "#28a745";
-                statusDiv.innerText = "Analyse terminée ! Vérifiez les cases remplies.";
-                
+                const matchFisav = texteExtrait.match(/\b\d{2}[A-Z]{2}\d+\b/g);
+                if (matchFisav) document.getElementById('input_fisav').value = matchFisav[0];
+                const matchRef = texteExtrait.match(/SAV\s+[A-Z]+/g);
+                if (matchRef) document.getElementById('input_reference').value = matchRef[0];
+                statusDiv.style.color = "#28a745"; statusDiv.innerText = "Analyse terminée ! Vérifiez les cases remplies.";
             } catch (error) {
-                console.error("Erreur OCR: ", error);
-                statusDiv.style.color = "#dc3545";
-                statusDiv.innerText = "Erreur lors de la lecture de l'image.";
+                statusDiv.style.color = "#dc3545"; statusDiv.innerText = "Erreur lors de la lecture de l'image.";
             }
         };
 
         // ================= LOGIQUE IMPRESSION & SAUVEGARDE =================
         window.prepareAndPrint = async function() {
             let fisav = document.getElementById('input_fisav').value;
-            document.getElementById('p_fisav').innerText = fisav;
-            document.getElementById('p_bottom_fisav').innerText = fisav;
-            
-            let reference = document.getElementById('input_reference').value;
-            document.getElementById('p_ref').innerText = reference;
-            
+            document.getElementById('p_fisav').innerText = fisav; document.getElementById('p_bottom_fisav').innerText = fisav;
+            let reference = document.getElementById('input_reference').value; document.getElementById('p_ref').innerText = reference;
             let dateVal = document.getElementById('input_date').value;
             if(dateVal) { let d = new Date(dateVal); document.getElementById('p_date').innerText = pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear().toString().slice(-2); }
-            
             let dateTirageVal = document.getElementById('input_date_tirage').value;
             if(dateTirageVal) { let dt = new Date(dateTirageVal); document.getElementById('p_date_tirage').innerText = pad(dt.getDate()) + '/' + pad(dt.getMonth()+1) + '/' + dt.getFullYear().toString().slice(-2); }
-            let heureTirage = document.getElementById('input_heure_tirage').value;
-            document.getElementById('p_heure_tirage').innerText = heureTirage;
-
-            let client = document.getElementById('input_client').value;
-            document.getElementById('p_client').innerText = client;
+            let heureTirage = document.getElementById('input_heure_tirage').value; document.getElementById('p_heure_tirage').innerText = heureTirage;
+            let client = document.getElementById('input_client').value; document.getElementById('p_client').innerText = client;
+            let machine = document.getElementById('input_machine').value; document.getElementById('p_machine').innerText = machine; document.getElementById('p_ref_machine').innerText = machine;
+            let travauxBruts = document.getElementById('input_travaux').value; document.getElementById('p_travaux_content').innerHTML = travauxBruts.replace(/\n/g, '<br>');
             
-            let machine = document.getElementById('input_machine').value;
-            document.getElementById('p_machine').innerText = machine;
-            document.getElementById('p_ref_machine').innerText = machine;
-
-            let travauxBruts = document.getElementById('input_travaux').value;
-            document.getElementById('p_travaux_content').innerHTML = travauxBruts.replace(/\n/g, '<br>');
-
-            let tbody = document.getElementById('p_lignes_prestations');
-            tbody.innerHTML = '';
+            let tbody = document.getElementById('p_lignes_prestations'); tbody.innerHTML = '';
+            let refForfait = document.getElementById('input_forfait_ref').value; let nomForfait = document.getElementById('input_forfait_nom').value; let diagForfait = document.getElementById('input_forfait_diag').value;
+            tbody.innerHTML += \`<tr><td>FHSAV-\${refForfait}</td><td>Forfait Horaire \${nomForfait}<br><br><span style="padding-left:15px;">\${diagForfait}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>\`;
             
-            let refForfait = document.getElementById('input_forfait_ref').value;
-            let nomForfait = document.getElementById('input_forfait_nom').value;
-            let diagForfait = document.getElementById('input_forfait_diag').value;
-
-            tbody.innerHTML += `<tr><td>FHSAV-${refForfait}</td><td>Forfait Horaire ${nomForfait}<br><br><span style="padding-left:15px;">${diagForfait}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>`;
-
             let techNames = []; let detailTechniciens = []; let totalQty = 0; let currentUnit = "";
             document.querySelectorAll('.tech-row').forEach((row) => {
                 let name = row.querySelector('.tech-name').value.toUpperCase();
@@ -364,26 +329,22 @@
                 let unit = row.querySelector('.tech-qty-unit').value;
                 if (name.trim() !== '') {
                     techNames.push(name); detailTechniciens.push({ nom: name, quantite: qtyVal, unite: unit }); totalQty += qtyVal; currentUnit = unit;
-                    tbody.innerHTML += `<tr><td style="padding-top: 10px;">FHTEC-EM2</td><td style="padding-top: 10px;">Heure Technicien ${name}</td><td style="padding-top: 10px; text-align: center;">${qtyVal} ${unit === 'Heure(s)' ? 'H' : 'J'}</td><td style="padding-top: 10px; text-align: right;">0,00</td><td style="padding-top: 10px; text-align: right;">0,00</td></tr>`;
+                    tbody.innerHTML += \`<tr><td style="padding-top: 10px;">FHTEC-EM2</td><td style="padding-top: 10px;">Heure Technicien \${name}</td><td style="padding-top: 10px; text-align: center;">\${qtyVal} \${unit === 'Heure(s)' ? 'H' : 'J'}</td><td style="padding-top: 10px; text-align: right;">0,00</td><td style="padding-top: 10px; text-align: right;">0,00</td></tr>\`;
                 }
             });
-            tbody.innerHTML += `<tr><td style="height: 30px;"></td><td></td><td></td><td></td><td></td></tr>`;
-
-            let allTechs = techNames.join(', ');
-            document.getElementById('p_nom_tech').innerText = allTechs;
-            document.getElementById('p_realise_par').innerText = allTechs;
-            
-            let totalFormatte = totalQty > 0 ? (totalQty + (currentUnit === 'Heure(s)' ? ' H' : ' J')) : '0,00';
-            document.getElementById('p_somme_reporter').innerText = totalFormatte;
+            tbody.innerHTML += \`<tr><td style="height: 30px;"></td><td></td><td></td><td></td><td></td></tr>\`;
+            let allTechs = techNames.join(', '); document.getElementById('p_nom_tech').innerText = allTechs; document.getElementById('p_realise_par').innerText = allTechs;
+            let totalFormatte = totalQty > 0 ? (totalQty + (currentUnit === 'Heure(s)' ? ' H' : ' J')) : '0,00'; document.getElementById('p_somme_reporter').innerText = totalFormatte;
 
             const historiqueData = {
                 numero_fisav: fisav, reference_intervention: reference, client: client, machine: machine,
                 date_intervention: dateVal, date_tirage: dateTirageVal + " " + heureTirage, diagnostic: diagForfait,
-                travaux_realises: travauxBruts, techniciens_intervenants: detailTechniciens, total_temps: totalFormatte, timestamp_creation: new Date()
+                travaux_realises: travauxBruts, techniciens_intervenants: detailTechniciens, total_temps: totalFormatte, 
+                timestamp_creation: new Date(),
+                cree_par: currentUserEmail // Ajout de l'identifiant du technicien qui crée la fiche
             };
 
             try { await addDoc(collection(db, "historique_interventions"), historiqueData); } catch (error) { console.error("Erreur sync :", error); }
-
             window.print();
         };
 
