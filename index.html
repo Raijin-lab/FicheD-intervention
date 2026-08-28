@@ -15,23 +15,26 @@
     <style>
         /* ================= STYLE DE L'APPLICATION ================= */
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
-        .app-container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .app-container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #333; margin-top: 0; }
         
         /* Style Login */
-        #login-container { margin-top: 50px; text-align: center; }
+        #login-container { margin-top: 50px; text-align: center; max-width: 500px; }
         #login-container input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
         .btn-login { background: #0056b3; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; }
         #login-error { color: #dc3545; margin-top: 10px; font-weight: bold; display: none; }
         
-        /* En-tête de l'app avec déconnexion */
-        .app-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eef5ff; padding-bottom: 10px; margin-bottom: 20px; }
+        /* En-tête de l'app avec navigation */
+        .app-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eef5ff; padding-bottom: 10px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .nav-buttons button { padding: 10px 15px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-nav-active { background: #0056b3; color: white; }
+        .btn-nav-inactive { background: #e0e0e0; color: #333; }
         .btn-logout { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
 
+        /* Style Formulaire */
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 14px; }
         input[type="text"], input[type="date"], input[type="time"], input[type="number"], textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        
         .flex-row { display: flex; gap: 10px; }
         .flex-row > div { flex: 1; }
 
@@ -47,9 +50,16 @@
         .tech-row select.tech-qty-unit { flex: 1; }
         .btn-add { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
         .btn-remove { background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
-        
         .btn-print { background: #000; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 10px; }
         
+        /* Style Historique */
+        .history-table-container { overflow-x: auto; }
+        table.history-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        .history-table th, .history-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .history-table th { background-color: #f4f7f6; font-weight: bold; }
+        .history-table tr:hover { background-color: #f1f1f1; }
+        .btn-reprint { background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+
         .print-only { display: none; }
 
         /* ================= STYLE IMPRESSION ================= */
@@ -97,83 +107,104 @@
     <div id="login-container" class="app-container">
         <h2>🔒 Portail Techniciens A2CIM</h2>
         <p style="color: #666; margin-bottom: 20px;">Veuillez vous identifier pour accéder à l'historique et générer une fiche.</p>
-        
         <input type="email" id="auth_email" placeholder="Adresse Email">
         <input type="password" id="auth_password" placeholder="Mot de passe">
-        
         <button class="btn-login" onclick="login()">Se Connecter</button>
         <div id="login-error">Identifiants incorrects.</div>
     </div>
 
-    <!-- ================= APPLICATION PRINCIPALE (Masquée par défaut) ================= -->
+    <!-- ================= APPLICATION PRINCIPALE ================= -->
     <div id="main-app" class="app-container" style="display: none;">
+        
         <div class="app-header">
-            <h2>Fiche Intervention SAV</h2>
+            <div class="nav-buttons">
+                <button id="btn-nav-form" class="btn-nav-active" onclick="switchView('form')">Nouvelle Fiche</button>
+                <button id="btn-nav-history" class="btn-nav-inactive" onclick="switchView('history')">Historique Cloud</button>
+            </div>
             <button class="btn-logout" onclick="logout()">Déconnexion</button>
         </div>
 
-        <div class="scanner-box">
-            <label>📷 Scanner la fiche générée par le système</label>
-            <input type="file" id="imageInput" accept="image/*" capture="environment">
-            <button type="button" class="btn-scan" onclick="processOCR()">Lancer l'extraction automatique</button>
-            <div id="ocrStatus"></div>
-        </div>
-        
-        <div class="form-group flex-row">
-            <div><label>N° FISAV</label><input type="text" id="input_fisav" placeholder="Ex: 26OF166"></div>
-            <div><label>Référence Inter.</label><input type="text" id="input_reference" placeholder="Ex: SAV MSR"></div>
-        </div>
+        <!-- ================= VUE : FORMULAIRE ================= -->
+        <div id="view-form">
+            <div class="scanner-box">
+                <label>📷 Scanner la fiche générée par le système</label>
+                <input type="file" id="imageInput" accept="image/*" capture="environment">
+                <button type="button" class="btn-scan" onclick="processOCR()">Lancer l'extraction automatique</button>
+                <div id="ocrStatus"></div>
+            </div>
+            
+            <div class="form-group flex-row">
+                <div><label>N° FISAV</label><input type="text" id="input_fisav" placeholder="Ex: 26OF166"></div>
+                <div><label>Référence Inter.</label><input type="text" id="input_reference" placeholder="Ex: SAV MSR"></div>
+            </div>
 
-        <div class="form-group flex-row">
-            <div><label>Date (Intervention)</label><input type="date" id="input_date"></div>
-            <div>
-                <label>Date/Heure (Tirage)</label>
-                <div class="flex-row">
-                    <input type="date" id="input_date_tirage" style="flex:2;">
-                    <input type="time" id="input_heure_tirage" step="1" style="flex:1;">
+            <div class="form-group flex-row">
+                <div><label>Date (Intervention)</label><input type="date" id="input_date"></div>
+                <div>
+                    <label>Date/Heure (Tirage)</label>
+                    <div class="flex-row">
+                        <input type="date" id="input_date_tirage" style="flex:2;">
+                        <input type="time" id="input_heure_tirage" step="1" style="flex:1;">
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="form-group flex-row">
-            <div><label>Client</label><input type="text" id="input_client" placeholder="Client"></div>
-            <div><label>Machine</label><input type="text" id="input_machine" placeholder="Machine"></div>
-        </div>
-
-        <div class="forfait-box">
-            <label>Forfait d'intervention (Ligne 1)</label>
-            <div class="flex-row" style="margin-bottom: 10px;">
-                <div style="flex: 1;"><span style="font-size:12px; color:#555;">FHSAV-</span><input type="text" id="input_forfait_ref" value="DEPAN" placeholder="DEPAN"></div>
-                <div style="flex: 2;"><span style="font-size:12px; color:#555;">Forfait Horaire</span><input type="text" id="input_forfait_nom" value="SAV-Depannage" placeholder="SAV-Depannage"></div>
+            <div class="form-group flex-row">
+                <div><label>Client</label><input type="text" id="input_client" placeholder="Client"></div>
+                <div><label>Machine</label><input type="text" id="input_machine" placeholder="Machine"></div>
             </div>
-            <div>
-                <span style="font-size:12px; color:#555;">Ligne de diagnostic</span>
-                <input type="text" id="input_forfait_diag" placeholder="Ex: Diagnostique de la machine">
-            </div>
-        </div>
 
-        <div class="tech-box">
-            <label>Équipe Technique</label>
-            <div id="tech-list">
-                <div class="tech-row">
-                    <!-- Prérempli dynamiquement lors de la connexion -->
-                    <input type="text" class="tech-name" id="default_tech_name" placeholder="Nom">
-                    <input type="number" class="tech-qty-val" placeholder="Qté" value="0" step="0.5">
-                    <select class="tech-qty-unit">
-                        <option value="Heure(s)">Heure(s)</option>
-                        <option value="Jour(s)">Jour(s)</option>
-                    </select>
+            <div class="forfait-box">
+                <label>Forfait d'intervention (Ligne 1)</label>
+                <div class="flex-row" style="margin-bottom: 10px;">
+                    <div style="flex: 1;"><span style="font-size:12px; color:#555;">FHSAV-</span><input type="text" id="input_forfait_ref" value="DEPAN" placeholder="DEPAN"></div>
+                    <div style="flex: 2;"><span style="font-size:12px; color:#555;">Forfait Horaire</span><input type="text" id="input_forfait_nom" value="SAV-Depannage" placeholder="SAV-Depannage"></div>
                 </div>
+                <div><span style="font-size:12px; color:#555;">Ligne de diagnostic</span><input type="text" id="input_forfait_diag" placeholder="Ex: Diagnostique de la machine"></div>
             </div>
-            <button class="btn-add" onclick="addTechnician()">+ Ajouter un autre technicien</button>
+
+            <div class="tech-box">
+                <label>Équipe Technique</label>
+                <div id="tech-list">
+                    <div class="tech-row">
+                        <input type="text" class="tech-name" id="default_tech_name" placeholder="Nom">
+                        <input type="number" class="tech-qty-val" placeholder="Qté" value="0" step="0.5">
+                        <select class="tech-qty-unit"><option value="Heure(s)">Heure(s)</option><option value="Jour(s)">Jour(s)</option></select>
+                    </div>
+                </div>
+                <button class="btn-add" onclick="addTechnician()">+ Ajouter un autre technicien</button>
+            </div>
+
+            <div class="form-group">
+                <label>Travaux Réalisés</label>
+                <textarea id="input_travaux" rows="4" placeholder="Détaillez ici..." spellcheck="true" lang="fr"></textarea>
+            </div>
+
+            <button class="btn-print" onclick="prepareAndPrint()">Générer, Sauvegarder et Imprimer</button>
         </div>
 
-        <div class="form-group">
-            <label>Travaux Réalisés</label>
-            <textarea id="input_travaux" rows="4" placeholder="Détaillez ici..." spellcheck="true" lang="fr"></textarea>
+        <!-- ================= VUE : HISTORIQUE ================= -->
+        <div id="view-history" style="display: none;">
+            <h3>Dernières interventions validées</h3>
+            <button class="btn-scan" onclick="loadHistory()" style="margin-bottom: 15px;">🔄 Rafraîchir la liste</button>
+            <div class="history-table-container">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>N° FISAV</th>
+                            <th>Client</th>
+                            <th>Machine</th>
+                            <th>Technicien(s)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                        <tr><td colspan="6" style="text-align:center;">Chargement des données...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-
-        <button class="btn-print" onclick="prepareAndPrint()">Générer et Imprimer la fiche</button>
     </div>
 
     <!-- ================= DOCUMENT A IMPRIMER ================= -->
@@ -205,10 +236,10 @@
     <!-- ================= JAVASCRIPT & FIREBASE ================= -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { initializeFirestore, persistentLocalCache, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { initializeFirestore, persistentLocalCache, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        // ================= CONFIGURATION FIREBASE EXACTE =================
+        // CONFIGURATION FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyCv2FU2MgqO2XZl4G8R3WHpC9wMg15yylE",
             authDomain: "a2cim-sav.firebaseapp.com",
@@ -222,6 +253,23 @@
         const auth = getAuth(app);
 
         let currentUserEmail = "";
+        let loadedHistoryData = []; // Stocke les données de l'historique
+
+        // ================= GESTION NAVIGATION =================
+        window.switchView = function(view) {
+            if(view === 'form') {
+                document.getElementById('view-form').style.display = 'block';
+                document.getElementById('view-history').style.display = 'none';
+                document.getElementById('btn-nav-form').className = 'btn-nav-active';
+                document.getElementById('btn-nav-history').className = 'btn-nav-inactive';
+            } else {
+                document.getElementById('view-form').style.display = 'none';
+                document.getElementById('view-history').style.display = 'block';
+                document.getElementById('btn-nav-form').className = 'btn-nav-inactive';
+                document.getElementById('btn-nav-history').className = 'btn-nav-active';
+                window.loadHistory(); // Charge la base de données au clic
+            }
+        };
 
         // ================= GESTION DE LA CONNEXION =================
         onAuthStateChanged(auth, (user) => {
@@ -236,20 +284,124 @@
                 document.getElementById('main-app').style.display = 'none';
             }
         });
-
         window.login = function() {
             const email = document.getElementById('auth_email').value;
             const password = document.getElementById('auth_password').value;
             const errorDiv = document.getElementById('login-error');
-            
             signInWithEmailAndPassword(auth, email, password)
                 .then(() => { errorDiv.style.display = 'none'; })
                 .catch((error) => { console.error("Erreur:", error); errorDiv.style.display = 'block'; });
         };
-
         window.logout = function() { signOut(auth); };
 
-        // ================= LOGIQUE FORMULAIRE =================
+        // ================= RECUPERATION HISTORIQUE CLOUD =================
+        window.loadHistory = async function() {
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Recherche dans le cloud...</td></tr>';
+            
+            try {
+                // Requête : chercher dans "historique_interventions" et trier par date décroissante
+                const q = query(collection(db, "historique_interventions"), orderBy("timestamp_creation", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                tbody.innerHTML = '';
+                loadedHistoryData = [];
+
+                if (querySnapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucune intervention trouvée.</td></tr>';
+                    return;
+                }
+
+                let index = 0;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    loadedHistoryData.push(data);
+                    
+                    // Formater les noms des techniciens pour le tableau
+                    let nomsTechs = data.techniciens_intervenants ? data.techniciens_intervenants.map(t => t.nom).join(', ') : data.cree_par;
+
+                    // Formater la date pour affichage
+                    let dateAffiche = "";
+                    if(data.date_intervention) {
+                        let d = new Date(data.date_intervention);
+                        dateAffiche = (d.getDate()<10?'0':'') + d.getDate() + '/' + ((d.getMonth()+1)<10?'0':'') + (d.getMonth()+1) + '/' + d.getFullYear();
+                    }
+
+                    // Création de la ligne
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${dateAffiche}</td>
+                        <td><strong>${data.numero_fisav || '-'}</strong></td>
+                        <td>${data.client || '-'}</td>
+                        <td>${data.machine || '-'}</td>
+                        <td>${nomsTechs}</td>
+                        <td><button class="btn-reprint" onclick="reprintFiche(${index})">🖨️ Imprimer</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                    index++;
+                });
+
+            } catch (error) {
+                console.error("Erreur de chargement de l'historique :", error);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erreur de connexion cloud. Vérifiez votre réseau.</td></tr>';
+            }
+        };
+
+        // ================= RE-IMPRESSION D'UNE ANCIENNE FICHE =================
+        window.reprintFiche = function(index) {
+            const data = loadedHistoryData[index];
+            if(!data) return;
+
+            // Remplissage invisible du modèle d'impression avec les anciennes données
+            document.getElementById('p_fisav').innerText = data.numero_fisav || '';
+            document.getElementById('p_bottom_fisav').innerText = data.numero_fisav || '';
+            document.getElementById('p_ref').innerText = data.reference_intervention || '';
+            
+            if(data.date_intervention) {
+                let d = new Date(data.date_intervention);
+                document.getElementById('p_date').innerText = (d.getDate()<10?'0':'') + d.getDate() + '/' + ((d.getMonth()+1)<10?'0':'') + (d.getMonth()+1) + '/' + d.getFullYear().toString().slice(-2);
+            }
+            
+            // Pour le tirage on sépare la chaine enregistrée
+            if(data.date_tirage) {
+                let parts = data.date_tirage.split(' ');
+                if(parts.length > 0) {
+                    let dt = new Date(parts[0]);
+                    if(!isNaN(dt)) { document.getElementById('p_date_tirage').innerText = (dt.getDate()<10?'0':'') + dt.getDate() + '/' + ((dt.getMonth()+1)<10?'0':'') + (dt.getMonth()+1) + '/' + dt.getFullYear().toString().slice(-2); }
+                }
+                if(parts.length > 1) { document.getElementById('p_heure_tirage').innerText = parts[1]; }
+            }
+
+            document.getElementById('p_client').innerText = data.client || '';
+            document.getElementById('p_machine').innerText = data.machine || '';
+            document.getElementById('p_ref_machine').innerText = data.machine || '';
+            document.getElementById('p_travaux_content').innerHTML = (data.travaux_realises || '').replace(/\n/g, '<br>');
+            
+            // Reconstruction du tableau des prestations
+            let tbody = document.getElementById('p_lignes_prestations'); 
+            tbody.innerHTML = '';
+            
+            tbody.innerHTML += `<tr><td>FHSAV-DEPAN</td><td>Forfait Horaire SAV-Depannage<br><br><span style="padding-left:15px;">${data.diagnostic || ''}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>`;
+            
+            let allTechs = [];
+            if(data.techniciens_intervenants) {
+                data.techniciens_intervenants.forEach(tech => {
+                    allTechs.push(tech.nom);
+                    tbody.innerHTML += `<tr><td style="padding-top: 10px;">FHTEC-EM2</td><td style="padding-top: 10px;">Heure Technicien ${tech.nom}</td><td style="padding-top: 10px; text-align: center;">${tech.quantite} ${tech.unite === 'Heure(s)' ? 'H' : 'J'}</td><td style="padding-top: 10px; text-align: right;">0,00</td><td style="padding-top: 10px; text-align: right;">0,00</td></tr>`;
+                });
+            }
+            tbody.innerHTML += `<tr><td style="height: 30px;"></td><td></td><td></td><td></td><td></td></tr>`;
+            
+            let nomsFinaux = allTechs.join(', ');
+            document.getElementById('p_nom_tech').innerText = nomsFinaux;
+            document.getElementById('p_realise_par').innerText = nomsFinaux;
+            document.getElementById('p_somme_reporter').innerText = data.total_temps || '0,00';
+
+            // Lancement de l'impression
+            window.print();
+        };
+
+        // ================= INITIALISATION FORMULAIRE (Dates) =================
         let now = new Date();
         document.getElementById('input_date').valueAsDate = now;
         document.getElementById('input_date_tirage').valueAsDate = now;
@@ -268,6 +420,7 @@
             list.appendChild(row);
         };
 
+        // ================= OCR & SAUVEGARDE NOUVELLE FICHE =================
         window.processOCR = async function() {
             const fileInput = document.getElementById('imageInput');
             const statusDiv = document.getElementById('ocrStatus');
@@ -286,7 +439,6 @@
             }
         };
 
-        // ================= IMPRESSION =================
         window.prepareAndPrint = async function() {
             let fisav = document.getElementById('input_fisav').value;
             document.getElementById('p_fisav').innerText = fisav; document.getElementById('p_bottom_fisav').innerText = fisav;
