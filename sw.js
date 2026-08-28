@@ -1,4 +1,4 @@
-const CACHE_NAME = 'a2cim-fiche-v3';
+const CACHE_NAME = 'a2cim-fiche-v4';
 const urlsToCache = [
     './index.html',
     './manifest.json',
