@@ -10,7 +10,7 @@
     <link rel="apple-touch-icon" href="./icon-192.png">
 
     <!-- Bibliothèque OCR Tesseract.js -->
-    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=vLg6AdSC5nIUq70KaS9CWEHZAhiQzBxlnPHSFq6bxyfWTE-Py1gRfiDkcTJR37ujXWjDHmYu2TM4MHic81wYA38r5V_I61hXuA3nkuEdvmpJMohaXz-kxREQhzBLvli3xCziRlbjtdI82tdBlniopXLNQrhkPW9vv8faaJR68yYME1PAk__jYXnNxbh0YRdcEsxt6z9w_EOXsoyZf8dxkBEmlOtu7ZxRnq72jcOOgYfNapexlKNgPIfg1P6mqJUrt4Ec1WcLgjJ-nsRIzoo_3g03E9nsOvi6wPkRckDpMIWB56fu7rbCDbzeuqylcWhpxcExfTSd7_nvxnkOeTingg" charset="UTF-8"></script><link rel="stylesheet" crossorigin="anonymous" href="https://gc.kis.v2.scr.kaspersky-labs.com/E3E8934C-235A-4B0E-825A-35A08381A191/abn/main.css?attr=aHR0cHM6Ly9jb250cmlidXRpb24udXNlcmNvbnRlbnQuZ29vZ2xlLmNvbS9kb3dubG9hZD9jPUNneGlZWEprWDNOMGIzSmhaMlVTVUJJTmNtVnpjRzl1YzJWZlpHRjBZUm9fQ2pCaE9XVTNaVFF6WVdFd016WXhPR05oTURBd05qVmhNVFpsT0RWbE16a3dOakEwWVRRMU1tWmpPRGt6TXpNNVpXTVNDeElIRUt5ZXc2SERHUmdCJmZpbGVuYW1lPWluZGV4Lmh0bWwmb3BpPTEwMzEzNTA1MCZhdXRodXNlcj0x"/><script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
         /* ================= STYLE DE L'APPLICATION ================= */
@@ -206,10 +206,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { initializeFirestore, persistentLocalCache, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        // Import des modules d'authentification
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        // ================= CONFIGURATION FIREBASE =================
+        // ================= CONFIGURATION FIREBASE EXACTE =================
         const firebaseConfig = {
             apiKey: "AIzaSyCv2FU2MgqO2XZl4G8R3WHpC9wMg15yylE",
             authDomain: "a2cim-sav.firebaseapp.com",
@@ -222,23 +221,17 @@
         const db = initializeFirestore(app, { localCache: persistentLocalCache() });
         const auth = getAuth(app);
 
-        // Variable globale pour stocker l'email de l'utilisateur connecté
         let currentUserEmail = "";
 
         // ================= GESTION DE LA CONNEXION =================
-        // Écouteur d'état (Vérifie si on est déjà connecté en ouvrant l'app)
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // Utilisateur connecté
                 currentUserEmail = user.email;
                 document.getElementById('login-container').style.display = 'none';
                 document.getElementById('main-app').style.display = 'block';
-                
-                // On préremplit le nom du technicien avec le début de son email (ex: zouhair@a2cim.com -> ZOUHAIR)
                 let nomExtrait = user.email.split('@')[0].toUpperCase();
                 document.getElementById('default_tech_name').value = nomExtrait;
             } else {
-                // Utilisateur déconnecté
                 document.getElementById('login-container').style.display = 'block';
                 document.getElementById('main-app').style.display = 'none';
             }
@@ -250,24 +243,13 @@
             const errorDiv = document.getElementById('login-error');
             
             signInWithEmailAndPassword(auth, email, password)
-                .then((userCredential) => {
-                    errorDiv.style.display = 'none'; // Succès, onAuthStateChanged prend le relais
-                })
-                .catch((error) => {
-                    console.error("Erreur de connexion:", error);
-                    errorDiv.style.display = 'block';
-                });
+                .then(() => { errorDiv.style.display = 'none'; })
+                .catch((error) => { console.error("Erreur:", error); errorDiv.style.display = 'block'; });
         };
 
-        window.logout = function() {
-            signOut(auth).then(() => {
-                console.log("Déconnecté");
-            }).catch((error) => {
-                console.error("Erreur de déconnexion", error);
-            });
-        };
+        window.logout = function() { signOut(auth); };
 
-        // ================= LOGIQUE FORMULAIRE & OCR =================
+        // ================= LOGIQUE FORMULAIRE =================
         let now = new Date();
         document.getElementById('input_date').valueAsDate = now;
         document.getElementById('input_date_tirage').valueAsDate = now;
@@ -289,7 +271,7 @@
         window.processOCR = async function() {
             const fileInput = document.getElementById('imageInput');
             const statusDiv = document.getElementById('ocrStatus');
-            if (!fileInput.files.length) { alert("Sélectionnez ou prenez une photo d'abord !"); return; }
+            if (!fileInput.files.length) { alert("Sélectionnez ou prenez une photo !"); return; }
             statusDiv.style.color = "#0056b3"; statusDiv.innerText = "Lecture de l'image en cours...";
             try {
                 const result = await Tesseract.recognize(fileInput.files[0], 'fra');
@@ -298,13 +280,13 @@
                 if (matchFisav) document.getElementById('input_fisav').value = matchFisav[0];
                 const matchRef = texteExtrait.match(/SAV\s+[A-Z]+/g);
                 if (matchRef) document.getElementById('input_reference').value = matchRef[0];
-                statusDiv.style.color = "#28a745"; statusDiv.innerText = "Analyse terminée ! Vérifiez les cases remplies.";
+                statusDiv.style.color = "#28a745"; statusDiv.innerText = "Analyse terminée !";
             } catch (error) {
-                statusDiv.style.color = "#dc3545"; statusDiv.innerText = "Erreur lors de la lecture de l'image.";
+                statusDiv.style.color = "#dc3545"; statusDiv.innerText = "Erreur OCR.";
             }
         };
 
-        // ================= LOGIQUE IMPRESSION & SAUVEGARDE =================
+        // ================= IMPRESSION =================
         window.prepareAndPrint = async function() {
             let fisav = document.getElementById('input_fisav').value;
             document.getElementById('p_fisav').innerText = fisav; document.getElementById('p_bottom_fisav').innerText = fisav;
@@ -320,7 +302,8 @@
             
             let tbody = document.getElementById('p_lignes_prestations'); tbody.innerHTML = '';
             let refForfait = document.getElementById('input_forfait_ref').value; let nomForfait = document.getElementById('input_forfait_nom').value; let diagForfait = document.getElementById('input_forfait_diag').value;
-            tbody.innerHTML += \`<tr><td>FHSAV-\${refForfait}</td><td>Forfait Horaire \${nomForfait}<br><br><span style="padding-left:15px;">\${diagForfait}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>\`;
+            
+            tbody.innerHTML += `<tr><td>FHSAV-${refForfait}</td><td>Forfait Horaire ${nomForfait}<br><br><span style="padding-left:15px;">${diagForfait}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>`;
             
             let techNames = []; let detailTechniciens = []; let totalQty = 0; let currentUnit = "";
             document.querySelectorAll('.tech-row').forEach((row) => {
@@ -329,10 +312,10 @@
                 let unit = row.querySelector('.tech-qty-unit').value;
                 if (name.trim() !== '') {
                     techNames.push(name); detailTechniciens.push({ nom: name, quantite: qtyVal, unite: unit }); totalQty += qtyVal; currentUnit = unit;
-                    tbody.innerHTML += \`<tr><td style="padding-top: 10px;">FHTEC-EM2</td><td style="padding-top: 10px;">Heure Technicien \${name}</td><td style="padding-top: 10px; text-align: center;">\${qtyVal} \${unit === 'Heure(s)' ? 'H' : 'J'}</td><td style="padding-top: 10px; text-align: right;">0,00</td><td style="padding-top: 10px; text-align: right;">0,00</td></tr>\`;
+                    tbody.innerHTML += `<tr><td style="padding-top: 10px;">FHTEC-EM2</td><td style="padding-top: 10px;">Heure Technicien ${name}</td><td style="padding-top: 10px; text-align: center;">${qtyVal} ${unit === 'Heure(s)' ? 'H' : 'J'}</td><td style="padding-top: 10px; text-align: right;">0,00</td><td style="padding-top: 10px; text-align: right;">0,00</td></tr>`;
                 }
             });
-            tbody.innerHTML += \`<tr><td style="height: 30px;"></td><td></td><td></td><td></td><td></td></tr>\`;
+            tbody.innerHTML += `<tr><td style="height: 30px;"></td><td></td><td></td><td></td><td></td></tr>`;
             let allTechs = techNames.join(', '); document.getElementById('p_nom_tech').innerText = allTechs; document.getElementById('p_realise_par').innerText = allTechs;
             let totalFormatte = totalQty > 0 ? (totalQty + (currentUnit === 'Heure(s)' ? ' H' : ' J')) : '0,00'; document.getElementById('p_somme_reporter').innerText = totalFormatte;
 
@@ -340,15 +323,13 @@
                 numero_fisav: fisav, reference_intervention: reference, client: client, machine: machine,
                 date_intervention: dateVal, date_tirage: dateTirageVal + " " + heureTirage, diagnostic: diagForfait,
                 travaux_realises: travauxBruts, techniciens_intervenants: detailTechniciens, total_temps: totalFormatte, 
-                timestamp_creation: new Date(),
-                cree_par: currentUserEmail // Ajout de l'identifiant du technicien qui crée la fiche
+                timestamp_creation: new Date(), cree_par: currentUserEmail
             };
 
             try { await addDoc(collection(db, "historique_interventions"), historiqueData); } catch (error) { console.error("Erreur sync :", error); }
             window.print();
         };
 
-        // PWA SW
         if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
     </script>
 </body>
