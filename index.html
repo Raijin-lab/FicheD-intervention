@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA - Fiche Intervention A2CIM (Sécurisée)</title>
+    <title>PWA - Fiche Intervention A2CIM (Mensuel & Stats)</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
@@ -35,12 +35,14 @@
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 14px; }
         input[type="text"], input[type="date"], input[type="time"], input[type="number"], textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        input[type="month"] { padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; }
         .flex-row { display: flex; gap: 10px; }
         .flex-row > div { flex: 1; }
 
         .scanner-box { border: 2px dashed #0056b3; padding: 15px; border-radius: 8px; background: #eef5ff; margin-bottom: 20px; text-align: center; }
         .scanner-box input[type="file"] { margin-bottom: 10px; }
         .btn-scan { background: #0056b3; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-export { background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         #ocrStatus { margin-top: 10px; font-size: 13px; font-weight: bold; color: #d35400; }
 
         .tech-box, .forfait-box { border: 1px solid #6c757d; padding: 10px; border-radius: 5px; background: #f8f9fa; margin-bottom: 15px; }
@@ -50,21 +52,26 @@
         .tech-row select.tech-qty-unit { flex: 1; }
         .btn-add { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
         .btn-remove { background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
-        .btn-print { background: #000; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 10px; }
         
-        /* Style Historique */
-        .history-controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .btn-print { background: #000; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn-print:disabled { background: #666; cursor: not-allowed; }
+        
+        /* Style Historique & Tableau de bord */
+        .dashboard-stats { background: #17a2b8; color: white; padding: 15px; border-radius: 5px; font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 15px; }
+        .history-controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
         #search-client { flex: 1; min-width: 200px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
         .history-table-container { overflow-x: auto; }
         table.history-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 13px; }
         .history-table th, .history-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         .history-table th { background-color: #f4f7f6; font-weight: bold; }
         .history-table tr:hover { background-color: #f1f1f1; }
-        .btn-reprint { background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        
+        .btn-reprint { background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-bottom: 5px; display: block; width: 100%; }
+        .btn-delete { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; display: block; width: 100%; }
 
         .print-only { display: none; }
 
-        /* ================= STYLE IMPRESSION ================= */
+        /* ================= STYLE IMPRESSION (Ne touche pas à la mise en page originale) ================= */
         @media print {
             @page { size: A4; margin: 5mm; } 
             body { background: white; padding: 0; margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: black; }
@@ -105,7 +112,6 @@
 </head>
 <body>
 
-    <!-- ================= ECRAN DE CONNEXION ================= -->
     <div id="login-container" class="app-container">
         <h2>🔒 Portail Techniciens A2CIM</h2>
         <p style="color: #666; margin-bottom: 20px;">Veuillez vous identifier pour accéder à l'historique et générer une fiche.</p>
@@ -115,9 +121,7 @@
         <div id="login-error">Identifiants incorrects.</div>
     </div>
 
-    <!-- ================= APPLICATION PRINCIPALE ================= -->
     <div id="main-app" class="app-container" style="display: none;">
-        
         <div class="app-header">
             <div class="nav-buttons">
                 <button id="btn-nav-form" class="btn-nav-active" onclick="switchView('form')">Nouvelle Fiche</button>
@@ -126,7 +130,6 @@
             <button class="btn-logout" onclick="logout()">Déconnexion</button>
         </div>
 
-        <!-- ================= VUE : FORMULAIRE ================= -->
         <div id="view-form">
             <div class="scanner-box">
                 <label>📷 Scanner la fiche générée par le système</label>
@@ -182,16 +185,21 @@
                 <textarea id="input_travaux" rows="4" placeholder="Détaillez ici..." spellcheck="true" lang="fr"></textarea>
             </div>
 
-            <button class="btn-print" onclick="prepareAndPrint()">Générer, Sauvegarder et Imprimer</button>
+            <button class="btn-print" id="btn-generate-main" onclick="prepareAndPrint()">Générer, Sauvegarder et Imprimer</button>
         </div>
 
-        <!-- ================= VUE : HISTORIQUE ================= -->
         <div id="view-history" style="display: none;">
             <h3>Dernières interventions validées</h3>
             
+            <div class="dashboard-stats" id="dashboard-stats">
+                📊 Total des interventions ce mois : 0
+            </div>
+
             <div class="history-controls">
+                <input type="month" id="month-selector" onchange="loadHistory()">
                 <button class="btn-scan" onclick="loadHistory()">🔄 Rafraîchir</button>
-                <input type="text" id="search-client" placeholder="🔍 Rechercher par nom de client..." onkeyup="filterHistory()">
+                <input type="text" id="search-client" placeholder="🔍 Filtrer par client..." onkeyup="filterHistory()">
+                <button class="btn-export" onclick="exportMonthlyCSV()">📥 Exporter CSV (Mois sélectionné)</button>
             </div>
 
             <div class="history-table-container">
@@ -243,10 +251,9 @@
     <!-- ================= JAVASCRIPT & FIREBASE ================= -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { initializeFirestore, persistentLocalCache, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { initializeFirestore, persistentLocalCache, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        // CONFIGURATION FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyCv2FU2MgqO2XZl4G8R3WHpC9wMg15yylE",
             authDomain: "a2cim-sav.firebaseapp.com",
@@ -262,7 +269,6 @@
         let currentUserEmail = "";
         let loadedHistoryData = []; 
 
-        // ================= GESTION NAVIGATION =================
         window.switchView = function(view) {
             if(view === 'form') {
                 document.getElementById('view-form').style.display = 'block';
@@ -274,11 +280,17 @@
                 document.getElementById('view-history').style.display = 'block';
                 document.getElementById('btn-nav-form').className = 'btn-nav-inactive';
                 document.getElementById('btn-nav-history').className = 'btn-nav-active';
+                
+                // Initialise le mois en cours si vide
+                if(!document.getElementById('month-selector').value) {
+                    let d = new Date();
+                    let m = (d.getMonth() + 1).toString().padStart(2, '0');
+                    document.getElementById('month-selector').value = `${d.getFullYear()}-${m}`;
+                }
                 window.loadHistory(); 
             }
         };
 
-        // ================= GESTION DE LA CONNEXION =================
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUserEmail = user.email;
@@ -291,6 +303,7 @@
                 document.getElementById('main-app').style.display = 'none';
             }
         });
+
         window.login = function() {
             const email = document.getElementById('auth_email').value;
             const password = document.getElementById('auth_password').value;
@@ -301,48 +314,66 @@
         };
         window.logout = function() { signOut(auth); };
 
-        // ================= RECUPERATION HISTORIQUE =================
         window.loadHistory = async function() {
             const tbody = document.getElementById('history-tbody');
+            const selectedMonthVal = document.getElementById('month-selector').value;
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Recherche dans le cloud...</td></tr>';
             
             try {
                 const q = query(collection(db, "historique_interventions"), orderBy("timestamp_creation", "desc"));
                 const querySnapshot = await getDocs(q);
-                
                 tbody.innerHTML = '';
                 loadedHistoryData = [];
+                let countInterventions = 0;
 
-                if (querySnapshot.empty) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucune intervention trouvée.</td></tr>';
-                    return;
-                }
-
-                let index = 0;
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    loadedHistoryData.push(data);
+                querySnapshot.forEach((docSnapshot) => {
+                    const data = docSnapshot.data();
                     
-                    let nomsTechs = data.techniciens_intervenants ? data.techniciens_intervenants.map(t => t.nom).join(', ') : data.cree_par;
+                    // Filtrage local par mois sélectionné
+                    let dateCreation = data.timestamp_creation.toDate ? data.timestamp_creation.toDate() : new Date(data.timestamp_creation);
+                    let mDoc = (dateCreation.getMonth() + 1).toString().padStart(2, '0');
+                    let yDoc = dateCreation.getFullYear();
+                    let dateDocFormat = `${yDoc}-${mDoc}`;
 
-                    let dateAffiche = "";
-                    if(data.date_intervention) {
-                        let d = new Date(data.date_intervention);
-                        dateAffiche = (d.getDate()<10?'0':'') + d.getDate() + '/' + ((d.getMonth()+1)<10?'0':'') + (d.getMonth()+1) + '/' + d.getFullYear();
+                    if (dateDocFormat === selectedMonthVal) {
+                        loadedHistoryData.push({ id: docSnapshot.id, ...data });
+                        countInterventions++;
+                        
+                        let nomsTechs = data.techniciens_intervenants ? data.techniciens_intervenants.map(t => t.nom).join(', ') : data.cree_par;
+                        let dateAffiche = "";
+                        if(data.date_intervention) {
+                            let d = new Date(data.date_intervention);
+                            dateAffiche = (d.getDate()<10?'0':'') + d.getDate() + '/' + ((d.getMonth()+1)<10?'0':'') + (d.getMonth()+1) + '/' + d.getFullYear();
+                        }
+
+                        // VÉRIFICATION ADMINISTRATEUR : Remplacer TON_EMAIL@a2cim.com par ton email réel
+                        let deleteBtnHTML = "";
+                        if (currentUserEmail.toLowerCase() === 'zouhair@a2cim.com') {
+                            deleteBtnHTML = `<button class="btn-delete" onclick="deleteFiche(${loadedHistoryData.length - 1})">🗑️ Supprimer</button>`;
+                        }
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${dateAffiche}</td>
+                            <td><strong>${data.numero_fisav || '-'}</strong></td>
+                            <td class="td-client">${data.client || '-'}</td>
+                            <td>${data.machine || '-'}</td>
+                            <td>${nomsTechs}</td>
+                            <td>
+                                <button class="btn-reprint" onclick="reprintFiche(${loadedHistoryData.length - 1})">🖨️ Imprimer</button>
+                                ${deleteBtnHTML}
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
                     }
-
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${dateAffiche}</td>
-                        <td><strong>${data.numero_fisav || '-'}</strong></td>
-                        <td class="td-client">${data.client || '-'}</td>
-                        <td>${data.machine || '-'}</td>
-                        <td>${nomsTechs}</td>
-                        <td><button class="btn-reprint" onclick="reprintFiche(${index})">🖨️ Imprimer</button></td>
-                    `;
-                    tbody.appendChild(tr);
-                    index++;
                 });
+
+                // Mise à jour du tableau de bord
+                document.getElementById('dashboard-stats').innerText = `📊 Total des interventions pour ce mois : ${countInterventions}`;
+
+                if (countInterventions === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucune intervention pour ce mois.</td></tr>';
+                }
 
             } catch (error) {
                 console.error("Erreur historique :", error);
@@ -350,40 +381,63 @@
             }
         };
 
-        // ================= RECHERCHE PAR CLIENT =================
-        window.filterHistory = function() {
-            const filter = document.getElementById('search-client').value.toUpperCase();
-            const tbody = document.getElementById('history-tbody');
-            const trs = tbody.getElementsByTagName('tr');
-
-            for (let i = 0; i < trs.length; i++) {
-                // La colonne Client est la 3ème colonne (index 2)
-                const tdClient = trs[i].getElementsByTagName('td')[2];
-                if (tdClient) {
-                    const txtValue = tdClient.textContent || tdClient.innerText;
-                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                        trs[i].style.display = "";
-                    } else {
-                        trs[i].style.display = "none";
-                    }
+        window.deleteFiche = async function(index) {
+            const data = loadedHistoryData[index];
+            if(!data || !data.id) return;
+            if(confirm("Attention : Êtes-vous sûr de vouloir supprimer définitivement cette fiche (" + (data.numero_fisav || 'Sans N°') + ") ?")) {
+                try {
+                    await deleteDoc(doc(db, "historique_interventions", data.id));
+                    window.loadHistory(); 
+                } catch (error) {
+                    console.error("Erreur lors de la suppression :", error);
+                    alert("Erreur lors de la suppression.");
                 }
             }
         };
 
-        // ================= RE-IMPRESSION =================
+        window.filterHistory = function() {
+            const filter = document.getElementById('search-client').value.toUpperCase();
+            const tbody = document.getElementById('history-tbody');
+            const trs = tbody.getElementsByTagName('tr');
+            for (let i = 0; i < trs.length; i++) {
+                const tdClient = trs[i].getElementsByTagName('td')[2];
+                if (tdClient) {
+                    const txtValue = tdClient.textContent || tdClient.innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) { trs[i].style.display = ""; } 
+                    else { trs[i].style.display = "none"; }
+                }
+            }
+        };
+
+        window.exportMonthlyCSV = function() {
+            if(loadedHistoryData.length === 0) { alert("Aucune donnée chargée pour ce mois."); return; }
+            let currentMonthVal = document.getElementById('month-selector').value;
+            
+            let csvContent = "Date Intervention;N° FISAV;Client;Machine;Techniciens;Heures Totales;Diagnostic\n";
+            loadedHistoryData.forEach(data => {
+                let dateAff = data.date_intervention || ""; let fisav = data.numero_fisav || "";
+                let client = (data.client || "").replace(/"/g, '""'); let machine = (data.machine || "").replace(/"/g, '""');
+                let techs = data.techniciens_intervenants ? data.techniciens_intervenants.map(t => t.nom).join(' / ') : (data.cree_par || "");
+                let total = data.total_temps || ""; let diag = (data.diagnostic || "").replace(/"/g, '""');
+                csvContent += `"${dateAff}";"${fisav}";"${client}";"${machine}";"${techs}";"${total}";"${diag}"\n`;
+            });
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `A2CIM_Interventions_${currentMonthVal}.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        };
+
         window.reprintFiche = function(index) {
             const data = loadedHistoryData[index];
             if(!data) return;
-
-            document.getElementById('p_fisav').innerText = data.numero_fisav || '';
-            document.getElementById('p_bottom_fisav').innerText = data.numero_fisav || '';
+            document.getElementById('p_fisav').innerText = data.numero_fisav || ''; document.getElementById('p_bottom_fisav').innerText = data.numero_fisav || '';
             document.getElementById('p_ref').innerText = data.reference_intervention || '';
-            
             if(data.date_intervention) {
                 let d = new Date(data.date_intervention);
                 document.getElementById('p_date').innerText = (d.getDate()<10?'0':'') + d.getDate() + '/' + ((d.getMonth()+1)<10?'0':'') + (d.getMonth()+1) + '/' + d.getFullYear().toString().slice(-2);
             }
-            
             if(data.date_tirage) {
                 let parts = data.date_tirage.split(' ');
                 if(parts.length > 0) {
@@ -392,16 +446,11 @@
                 }
                 if(parts.length > 1) { document.getElementById('p_heure_tirage').innerText = parts[1]; }
             }
-
-            document.getElementById('p_client').innerText = data.client || '';
-            document.getElementById('p_machine').innerText = data.machine || '';
-            document.getElementById('p_ref_machine').innerText = data.machine || '';
+            document.getElementById('p_client').innerText = data.client || ''; document.getElementById('p_machine').innerText = data.machine || ''; document.getElementById('p_ref_machine').innerText = data.machine || '';
             document.getElementById('p_travaux_content').innerHTML = (data.travaux_realises || '').replace(/\n/g, '<br>');
             
-            let tbody = document.getElementById('p_lignes_prestations'); 
-            tbody.innerHTML = '';
+            let tbody = document.getElementById('p_lignes_prestations'); tbody.innerHTML = '';
             tbody.innerHTML += `<tr><td>FHSAV-DEPAN</td><td>Forfait Horaire SAV-Depannage<br><br><span style="padding-left:15px;">${data.diagnostic || ''}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>`;
-            
             let allTechs = [];
             if(data.techniciens_intervenants) {
                 data.techniciens_intervenants.forEach(tech => {
@@ -410,57 +459,42 @@
                 });
             }
             tbody.innerHTML += `<tr><td style="height: 30px;"></td><td></td><td></td><td></td><td></td></tr>`;
-            
-            let nomsFinaux = allTechs.join(', ');
-            document.getElementById('p_nom_tech').innerText = nomsFinaux;
-            document.getElementById('p_realise_par').innerText = nomsFinaux;
+            let nomsFinaux = allTechs.join(', '); document.getElementById('p_nom_tech').innerText = nomsFinaux; document.getElementById('p_realise_par').innerText = nomsFinaux;
             document.getElementById('p_somme_reporter').innerText = data.total_temps || '0,00';
-
             window.print();
         };
 
-        // ================= INITIALISATION FORMULAIRE =================
         let now = new Date();
-        document.getElementById('input_date').valueAsDate = now;
-        document.getElementById('input_date_tirage').valueAsDate = now;
-        let pad = (n) => n < 10 ? '0' + n : n;
-        document.getElementById('input_heure_tirage').value = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+        document.getElementById('input_date').valueAsDate = now; document.getElementById('input_date_tirage').valueAsDate = now;
+        let pad = (n) => n < 10 ? '0' + n : n; document.getElementById('input_heure_tirage').value = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
 
         document.getElementById('input_machine').addEventListener('input', function(e) {
             if(e.target.value) { document.getElementById('input_forfait_diag').value = "Diagnostique de la machine " + e.target.value; }
         });
 
         window.addTechnician = function() {
-            const list = document.getElementById('tech-list');
-            const row = document.createElement('div');
-            row.className = 'tech-row';
+            const list = document.getElementById('tech-list'); const row = document.createElement('div'); row.className = 'tech-row';
             row.innerHTML = `<input type="text" class="tech-name" placeholder="Nom"><input type="number" class="tech-qty-val" placeholder="Qté" value="0" step="0.5"><select class="tech-qty-unit"><option value="Heure(s)">Heure(s)</option><option value="Jour(s)">Jour(s)</option></select><button class="btn-remove" onclick="this.parentElement.remove()">X</button>`;
             list.appendChild(row);
         };
 
-        // ================= OCR =================
         window.processOCR = async function() {
-            const fileInput = document.getElementById('imageInput');
-            const statusDiv = document.getElementById('ocrStatus');
+            const fileInput = document.getElementById('imageInput'); const statusDiv = document.getElementById('ocrStatus');
             if (!fileInput.files.length) { alert("Sélectionnez ou prenez une photo !"); return; }
             statusDiv.style.color = "#0056b3"; statusDiv.innerText = "Lecture de l'image en cours...";
             try {
-                const result = await Tesseract.recognize(fileInput.files[0], 'fra');
-                const texteExtrait = result.data.text;
-                const matchFisav = texteExtrait.match(/\b\d{2}[A-Z]{2}\d+\b/g);
-                if (matchFisav) document.getElementById('input_fisav').value = matchFisav[0];
-                const matchRef = texteExtrait.match(/SAV\s+[A-Z]+/g);
-                if (matchRef) document.getElementById('input_reference').value = matchRef[0];
+                const result = await Tesseract.recognize(fileInput.files[0], 'fra'); const texteExtrait = result.data.text;
+                const matchFisav = texteExtrait.match(/\b\d{2}[A-Z]{2}\d+\b/g); if (matchFisav) document.getElementById('input_fisav').value = matchFisav[0];
+                const matchRef = texteExtrait.match(/SAV\s+[A-Z]+/g); if (matchRef) document.getElementById('input_reference').value = matchRef[0];
                 statusDiv.style.color = "#28a745"; statusDiv.innerText = "Analyse terminée !";
-            } catch (error) {
-                statusDiv.style.color = "#dc3545"; statusDiv.innerText = "Erreur OCR.";
-            }
+            } catch (error) { statusDiv.style.color = "#dc3545"; statusDiv.innerText = "Erreur OCR."; }
         };
 
-        // ================= GENERATION ET SAUVEGARDE =================
-        window.prepareAndPrint = async function() {
-            let fisav = document.getElementById('input_fisav').value;
-            document.getElementById('p_fisav').innerText = fisav; document.getElementById('p_bottom_fisav').innerText = fisav;
+        window.prepareAndPrint = function() {
+            const btnGenerer = document.getElementById('btn-generate-main');
+            btnGenerer.disabled = true; btnGenerer.innerText = "Génération en cours...";
+
+            let fisav = document.getElementById('input_fisav').value; document.getElementById('p_fisav').innerText = fisav; document.getElementById('p_bottom_fisav').innerText = fisav;
             let reference = document.getElementById('input_reference').value; document.getElementById('p_ref').innerText = reference;
             let dateVal = document.getElementById('input_date').value;
             if(dateVal) { let d = new Date(dateVal); document.getElementById('p_date').innerText = pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear().toString().slice(-2); }
@@ -473,7 +507,6 @@
             
             let tbody = document.getElementById('p_lignes_prestations'); tbody.innerHTML = '';
             let refForfait = document.getElementById('input_forfait_ref').value; let nomForfait = document.getElementById('input_forfait_nom').value; let diagForfait = document.getElementById('input_forfait_diag').value;
-            
             tbody.innerHTML += `<tr><td>FHSAV-${refForfait}</td><td>Forfait Horaire ${nomForfait}<br><br><span style="padding-left:15px;">${diagForfait}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>`;
             
             let techNames = []; let detailTechniciens = []; let totalQty = 0; let currentUnit = "";
@@ -497,8 +530,14 @@
                 timestamp_creation: new Date(), cree_par: currentUserEmail
             };
 
-            try { await addDoc(collection(db, "historique_interventions"), historiqueData); } catch (error) { console.error("Erreur sync :", error); }
-            window.print();
+            addDoc(collection(db, "historique_interventions"), historiqueData)
+                .then(() => console.log("Sauvegarde cloud OK"))
+                .catch((error) => console.error("Erreur sync :", error));
+
+            setTimeout(() => {
+                window.print();
+                setTimeout(() => { btnGenerer.disabled = false; btnGenerer.innerText = "Générer, Sauvegarder et Imprimer"; }, 2000);
+            }, 500);
         };
 
         if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
