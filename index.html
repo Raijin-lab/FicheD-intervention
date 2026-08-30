@@ -3,35 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA - Fiche Intervention A2CIM (Mensuel & Stats)</title>
+    <title>PWA - Fiche Intervention A2CIM (Admin & Rapide)</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
     <link rel="apple-touch-icon" href="./icon-192.png">
 
-    <!-- Bibliothèque OCR Tesseract.js -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
-        /* ================= STYLE DE L'APPLICATION ================= */
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
         .app-container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #333; margin-top: 0; }
         
-        /* Style Login */
         #login-container { margin-top: 50px; text-align: center; max-width: 500px; }
         #login-container input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
         .btn-login { background: #0056b3; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; }
         #login-error { color: #dc3545; margin-top: 10px; font-weight: bold; display: none; }
         
-        /* En-tête de l'app avec navigation */
         .app-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eef5ff; padding-bottom: 10px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-        .nav-buttons button { padding: 10px 15px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; }
+        .nav-buttons button { padding: 10px 15px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s; }
         .btn-nav-active { background: #0056b3; color: white; }
         .btn-nav-inactive { background: #e0e0e0; color: #333; }
         .btn-logout { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
 
-        /* Style Formulaire */
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 14px; }
         input[type="text"], input[type="date"], input[type="time"], input[type="number"], textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
@@ -42,7 +37,6 @@
         .scanner-box { border: 2px dashed #0056b3; padding: 15px; border-radius: 8px; background: #eef5ff; margin-bottom: 20px; text-align: center; }
         .scanner-box input[type="file"] { margin-bottom: 10px; }
         .btn-scan { background: #0056b3; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-export { background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         #ocrStatus { margin-top: 10px; font-size: 13px; font-weight: bold; color: #d35400; }
 
         .tech-box, .forfait-box { border: 1px solid #6c757d; padding: 10px; border-radius: 5px; background: #f8f9fa; margin-bottom: 15px; }
@@ -56,7 +50,6 @@
         .btn-print { background: #000; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .btn-print:disabled { background: #666; cursor: not-allowed; }
         
-        /* Style Historique & Tableau de bord */
         .dashboard-stats { background: #17a2b8; color: white; padding: 15px; border-radius: 5px; font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 15px; }
         .history-controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
         #search-client { flex: 1; min-width: 200px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
@@ -71,7 +64,6 @@
 
         .print-only { display: none; }
 
-        /* ================= STYLE IMPRESSION (Ne touche pas à la mise en page originale) ================= */
         @media print {
             @page { size: A4; margin: 5mm; } 
             body { background: white; padding: 0; margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: black; }
@@ -192,14 +184,13 @@
             <h3>Dernières interventions validées</h3>
             
             <div class="dashboard-stats" id="dashboard-stats">
-                📊 Total des interventions ce mois : 0
+                📊 Total des interventions pour ce mois : 0
             </div>
 
             <div class="history-controls">
                 <input type="month" id="month-selector" onchange="loadHistory()">
                 <button class="btn-scan" onclick="loadHistory()">🔄 Rafraîchir</button>
                 <input type="text" id="search-client" placeholder="🔍 Filtrer par client..." onkeyup="filterHistory()">
-                <button class="btn-export" onclick="exportMonthlyCSV()">📥 Exporter CSV (Mois sélectionné)</button>
             </div>
 
             <div class="history-table-container">
@@ -248,10 +239,10 @@
         </div>
     </div>
 
-    <!-- ================= JAVASCRIPT & FIREBASE ================= -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { initializeFirestore, persistentLocalCache, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        // Ajout de limit pour accélérer considérablement le temps de réponse
+        import { initializeFirestore, persistentLocalCache, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
@@ -281,7 +272,6 @@
                 document.getElementById('btn-nav-form').className = 'btn-nav-inactive';
                 document.getElementById('btn-nav-history').className = 'btn-nav-active';
                 
-                // Initialise le mois en cours si vide
                 if(!document.getElementById('month-selector').value) {
                     let d = new Date();
                     let m = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -317,19 +307,19 @@
         window.loadHistory = async function() {
             const tbody = document.getElementById('history-tbody');
             const selectedMonthVal = document.getElementById('month-selector').value;
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Recherche dans le cloud...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Récupération sécurisée (patientez un instant)...</td></tr>';
             
             try {
-                const q = query(collection(db, "historique_interventions"), orderBy("timestamp_creation", "desc"));
+                // Optimisation de la requête pour ne récupérer que les 100 dernières fiches (très rapide)
+                const q = query(collection(db, "historique_interventions"), orderBy("timestamp_creation", "desc"), limit(100));
                 const querySnapshot = await getDocs(q);
+                
                 tbody.innerHTML = '';
                 loadedHistoryData = [];
                 let countInterventions = 0;
 
                 querySnapshot.forEach((docSnapshot) => {
                     const data = docSnapshot.data();
-                    
-                    // Filtrage local par mois sélectionné
                     let dateCreation = data.timestamp_creation.toDate ? data.timestamp_creation.toDate() : new Date(data.timestamp_creation);
                     let mDoc = (dateCreation.getMonth() + 1).toString().padStart(2, '0');
                     let yDoc = dateCreation.getFullYear();
@@ -346,7 +336,7 @@
                             dateAffiche = (d.getDate()<10?'0':'') + d.getDate() + '/' + ((d.getMonth()+1)<10?'0':'') + (d.getMonth()+1) + '/' + d.getFullYear();
                         }
 
-                        // VÉRIFICATION ADMINISTRATEUR : Remplacer TON_EMAIL@a2cim.com par ton email réel
+                        // L'EMAIL ADMINISTRATEUR EST MAINTENANT CODÉ ICI
                         let deleteBtnHTML = "";
                         if (currentUserEmail.toLowerCase() === 'zouhair@a2cim.net') {
                             deleteBtnHTML = `<button class="btn-delete" onclick="deleteFiche(${loadedHistoryData.length - 1})">🗑️ Supprimer</button>`;
@@ -368,7 +358,6 @@
                     }
                 });
 
-                // Mise à jour du tableau de bord
                 document.getElementById('dashboard-stats').innerText = `📊 Total des interventions pour ce mois : ${countInterventions}`;
 
                 if (countInterventions === 0) {
@@ -407,26 +396,6 @@
                     else { trs[i].style.display = "none"; }
                 }
             }
-        };
-
-        window.exportMonthlyCSV = function() {
-            if(loadedHistoryData.length === 0) { alert("Aucune donnée chargée pour ce mois."); return; }
-            let currentMonthVal = document.getElementById('month-selector').value;
-            
-            let csvContent = "Date Intervention;N° FISAV;Client;Machine;Techniciens;Heures Totales;Diagnostic\n";
-            loadedHistoryData.forEach(data => {
-                let dateAff = data.date_intervention || ""; let fisav = data.numero_fisav || "";
-                let client = (data.client || "").replace(/"/g, '""'); let machine = (data.machine || "").replace(/"/g, '""');
-                let techs = data.techniciens_intervenants ? data.techniciens_intervenants.map(t => t.nom).join(' / ') : (data.cree_par || "");
-                let total = data.total_temps || ""; let diag = (data.diagnostic || "").replace(/"/g, '""');
-                csvContent += `"${dateAff}";"${fisav}";"${client}";"${machine}";"${techs}";"${total}";"${diag}"\n`;
-            });
-            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `A2CIM_Interventions_${currentMonthVal}.csv`);
-            document.body.appendChild(link); link.click(); document.body.removeChild(link);
         };
 
         window.reprintFiche = function(index) {
