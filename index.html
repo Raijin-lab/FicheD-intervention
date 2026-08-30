@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA - Fiche Intervention A2CIM (Admin & Rapide)</title>
+    <title>PWA - Fiche Intervention A2CIM</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
@@ -47,9 +47,15 @@
         .btn-add { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
         .btn-remove { background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
         
-        .btn-print { background: #000; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn-print { background: #000; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         .btn-print:disabled { background: #666; cursor: not-allowed; }
         
+        /* Nouveau style pour WhatsApp */
+        .btn-whatsapp { background: #25D366; color: white; border: none; padding: 15px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; }
+        .btn-whatsapp:hover { background: #1ebe5c; }
+        .action-buttons { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .action-buttons > button { flex: 1; min-width: 250px; }
+
         .dashboard-stats { background: #17a2b8; color: white; padding: 15px; border-radius: 5px; font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 15px; }
         .history-controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
         #search-client { flex: 1; min-width: 200px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
@@ -177,7 +183,10 @@
                 <textarea id="input_travaux" rows="4" placeholder="Détaillez ici..." spellcheck="true" lang="fr"></textarea>
             </div>
 
-            <button class="btn-print" id="btn-generate-main" onclick="prepareAndPrint()">Générer, Sauvegarder et Imprimer</button>
+            <div class="action-buttons">
+                <button class="btn-print" id="btn-generate-main" onclick="prepareAndPrint()">Générer, Sauvegarder et Imprimer</button>
+                <button class="btn-whatsapp" onclick="sendWhatsApp()">💬 Partager via WhatsApp</button>
+            </div>
         </div>
 
         <div id="view-history" style="display: none;">
@@ -241,7 +250,6 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        // Ajout de limit pour accélérer considérablement le temps de réponse
         import { initializeFirestore, persistentLocalCache, collection, addDoc, getDocs, query, orderBy, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -260,7 +268,6 @@
         let currentUserEmail = "";
         let loadedHistoryData = [];
 
-        // Empêche l'injection de code HTML/JS via des champs texte (client, machine, technicien, travaux...)
         function escapeHtml(str) {
             if (str === null || str === undefined) return "";
             return String(str)
@@ -321,11 +328,9 @@
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Récupération sécurisée (patientez un instant)...</td></tr>';
 
             try {
-                // On interroge Firestore UNIQUEMENT sur le mois choisi (au lieu de tout charger puis filtrer).
-                // C'est instantané et complet, même si un mois contient plus de 100 fiches.
                 const [y, m] = selectedMonthVal.split('-').map(Number);
                 const debutMois = new Date(y, m - 1, 1);
-                const finMois = new Date(y, m, 1); // 1er du mois suivant (borne exclusive)
+                const finMois = new Date(y, m, 1);
 
                 const q = query(
                     collection(db, "historique_interventions"),
@@ -351,7 +356,6 @@
                         dateAffiche = (d.getDate()<10?'0':'') + d.getDate() + '/' + ((d.getMonth()+1)<10?'0':'') + (d.getMonth()+1) + '/' + d.getFullYear();
                     }
 
-                    // Ce bouton n'est qu'un confort visuel : la vraie protection doit venir des règles Firestore (voir firestore.rules)
                     let deleteBtnHTML = "";
                     if (currentUserEmail.toLowerCase() === 'zouhair@a2cim.net') {
                         deleteBtnHTML = `<button class="btn-delete" onclick="deleteFiche(${loadedHistoryData.length - 1})">🗑️ Supprimer</button>`;
@@ -380,7 +384,7 @@
 
             } catch (error) {
                 console.error("Erreur historique :", error);
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erreur de connexion cloud. (Un index Firestore est peut-être encore en cours de création — voir la console Firebase)</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erreur de connexion cloud.</td></tr>';
             }
         };
 
@@ -412,6 +416,7 @@
             }
         };
 
+        // Modification du titre temporaire pour le nom du fichier PDF depuis l'historique
         window.reprintFiche = function(index) {
             const data = loadedHistoryData[index];
             if(!data) return;
@@ -444,7 +449,17 @@
             tbody.innerHTML += `<tr><td style="height: 30px;"></td><td></td><td></td><td></td><td></td></tr>`;
             let nomsFinaux = allTechs.join(', '); document.getElementById('p_nom_tech').innerText = nomsFinaux; document.getElementById('p_realise_par').innerText = nomsFinaux;
             document.getElementById('p_somme_reporter').innerText = data.total_temps || '0,00';
-            window.print();
+            
+            // Logique de renommage du PDF pour la ré-impression
+            const originalTitle = document.title;
+            const fisavNom = data.numero_fisav ? data.numero_fisav.replace(/[^a-zA-Z0-9]/g, '_') : 'SANS_NUM';
+            const clientNom = data.client ? data.client.replace(/[^a-zA-Z0-9]/g, '_') : 'SANS_CLIENT';
+            document.title = `Fiche_${fisavNom}_${clientNom}`;
+
+            setTimeout(() => {
+                window.print();
+                document.title = originalTitle; // On remet le titre normal après l'impression
+            }, 300);
         };
 
         let now = new Date();
@@ -473,8 +488,19 @@
             } catch (error) { statusDiv.style.color = "#dc3545"; statusDiv.innerText = "Erreur OCR."; }
         };
 
+        // Nouvelle fonction pour WhatsApp
+        window.sendWhatsApp = function() {
+            let fisav = document.getElementById('input_fisav').value || "N/A";
+            let client = document.getElementById('input_client').value || "Client";
+            let machine = document.getElementById('input_machine').value || "Machine";
+            
+            let message = `Bonjour, voici la fiche d'intervention A2CIM.\n\n*N° FISAV :* ${fisav}\n*Client :* ${client}\n*Machine :* ${machine}\n\n(Veuillez trouver le fichier PDF en pièce jointe).`;
+            let whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            
+            window.open(whatsappUrl, '_blank');
+        };
+
         window.prepareAndPrint = function() {
-            // Validation des champs indispensables avant toute génération/sauvegarde
             const fisavCheck = document.getElementById('input_fisav').value.trim();
             const clientCheck = document.getElementById('input_client').value.trim();
             const machineCheck = document.getElementById('input_machine').value.trim();
@@ -532,8 +558,15 @@
                 .then(() => console.log("Sauvegarde cloud OK"))
                 .catch((error) => console.error("Erreur sync :", error));
 
+            // Logique de renommage du PDF
+            const originalTitle = document.title;
+            const fisavNom = fisavCheck.replace(/[^a-zA-Z0-9]/g, '_');
+            const clientNom = clientCheck.replace(/[^a-zA-Z0-9]/g, '_');
+            document.title = `Fiche_${fisavNom}_${clientNom}`;
+
             setTimeout(() => {
                 window.print();
+                document.title = originalTitle; // On remet le titre normal
                 setTimeout(() => { btnGenerer.disabled = false; btnGenerer.innerText = "Générer, Sauvegarder et Imprimer"; }, 2000);
             }, 500);
         };
