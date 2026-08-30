@@ -242,7 +242,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         // Ajout de limit pour accélérer considérablement le temps de réponse
-        import { initializeFirestore, persistentLocalCache, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { initializeFirestore, persistentLocalCache, collection, addDoc, getDocs, query, orderBy, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
@@ -258,7 +258,18 @@
         const auth = getAuth(app);
 
         let currentUserEmail = "";
-        let loadedHistoryData = []; 
+        let loadedHistoryData = [];
+
+        // Empêche l'injection de code HTML/JS via des champs texte (client, machine, technicien, travaux...)
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
         window.switchView = function(view) {
             if(view === 'form') {
@@ -308,54 +319,57 @@
             const tbody = document.getElementById('history-tbody');
             const selectedMonthVal = document.getElementById('month-selector').value;
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Récupération sécurisée (patientez un instant)...</td></tr>';
-            
+
             try {
-                // Optimisation de la requête pour ne récupérer que les 100 dernières fiches (très rapide)
-                const q = query(collection(db, "historique_interventions"), orderBy("timestamp_creation", "desc"), limit(100));
+                // On interroge Firestore UNIQUEMENT sur le mois choisi (au lieu de tout charger puis filtrer).
+                // C'est instantané et complet, même si un mois contient plus de 100 fiches.
+                const [y, m] = selectedMonthVal.split('-').map(Number);
+                const debutMois = new Date(y, m - 1, 1);
+                const finMois = new Date(y, m, 1); // 1er du mois suivant (borne exclusive)
+
+                const q = query(
+                    collection(db, "historique_interventions"),
+                    where("timestamp_creation", ">=", debutMois),
+                    where("timestamp_creation", "<", finMois),
+                    orderBy("timestamp_creation", "desc")
+                );
                 const querySnapshot = await getDocs(q);
-                
+
                 tbody.innerHTML = '';
                 loadedHistoryData = [];
                 let countInterventions = 0;
 
                 querySnapshot.forEach((docSnapshot) => {
                     const data = docSnapshot.data();
-                    let dateCreation = data.timestamp_creation.toDate ? data.timestamp_creation.toDate() : new Date(data.timestamp_creation);
-                    let mDoc = (dateCreation.getMonth() + 1).toString().padStart(2, '0');
-                    let yDoc = dateCreation.getFullYear();
-                    let dateDocFormat = `${yDoc}-${mDoc}`;
+                    loadedHistoryData.push({ id: docSnapshot.id, ...data });
+                    countInterventions++;
 
-                    if (dateDocFormat === selectedMonthVal) {
-                        loadedHistoryData.push({ id: docSnapshot.id, ...data });
-                        countInterventions++;
-                        
-                        let nomsTechs = data.techniciens_intervenants ? data.techniciens_intervenants.map(t => t.nom).join(', ') : data.cree_par;
-                        let dateAffiche = "";
-                        if(data.date_intervention) {
-                            let d = new Date(data.date_intervention);
-                            dateAffiche = (d.getDate()<10?'0':'') + d.getDate() + '/' + ((d.getMonth()+1)<10?'0':'') + (d.getMonth()+1) + '/' + d.getFullYear();
-                        }
-
-                        // L'EMAIL ADMINISTRATEUR EST MAINTENANT CODÉ ICI
-                        let deleteBtnHTML = "";
-                        if (currentUserEmail.toLowerCase() === 'zouhair@a2cim.net') {
-                            deleteBtnHTML = `<button class="btn-delete" onclick="deleteFiche(${loadedHistoryData.length - 1})">🗑️ Supprimer</button>`;
-                        }
-
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td>${dateAffiche}</td>
-                            <td><strong>${data.numero_fisav || '-'}</strong></td>
-                            <td class="td-client">${data.client || '-'}</td>
-                            <td>${data.machine || '-'}</td>
-                            <td>${nomsTechs}</td>
-                            <td>
-                                <button class="btn-reprint" onclick="reprintFiche(${loadedHistoryData.length - 1})">🖨️ Imprimer</button>
-                                ${deleteBtnHTML}
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
+                    let nomsTechs = data.techniciens_intervenants ? data.techniciens_intervenants.map(t => t.nom).join(', ') : data.cree_par;
+                    let dateAffiche = "";
+                    if(data.date_intervention) {
+                        let d = new Date(data.date_intervention);
+                        dateAffiche = (d.getDate()<10?'0':'') + d.getDate() + '/' + ((d.getMonth()+1)<10?'0':'') + (d.getMonth()+1) + '/' + d.getFullYear();
                     }
+
+                    // Ce bouton n'est qu'un confort visuel : la vraie protection doit venir des règles Firestore (voir firestore.rules)
+                    let deleteBtnHTML = "";
+                    if (currentUserEmail.toLowerCase() === 'zouhair@a2cim.net') {
+                        deleteBtnHTML = `<button class="btn-delete" onclick="deleteFiche(${loadedHistoryData.length - 1})">🗑️ Supprimer</button>`;
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${escapeHtml(dateAffiche)}</td>
+                        <td><strong>${escapeHtml(data.numero_fisav) || '-'}</strong></td>
+                        <td class="td-client">${escapeHtml(data.client) || '-'}</td>
+                        <td>${escapeHtml(data.machine) || '-'}</td>
+                        <td>${escapeHtml(nomsTechs)}</td>
+                        <td>
+                            <button class="btn-reprint" onclick="reprintFiche(${loadedHistoryData.length - 1})">🖨️ Imprimer</button>
+                            ${deleteBtnHTML}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
                 });
 
                 document.getElementById('dashboard-stats').innerText = `📊 Total des interventions pour ce mois : ${countInterventions}`;
@@ -366,7 +380,7 @@
 
             } catch (error) {
                 console.error("Erreur historique :", error);
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erreur de connexion cloud.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erreur de connexion cloud. (Un index Firestore est peut-être encore en cours de création — voir la console Firebase)</td></tr>';
             }
         };
 
@@ -416,7 +430,7 @@
                 if(parts.length > 1) { document.getElementById('p_heure_tirage').innerText = parts[1]; }
             }
             document.getElementById('p_client').innerText = data.client || ''; document.getElementById('p_machine').innerText = data.machine || ''; document.getElementById('p_ref_machine').innerText = data.machine || '';
-            document.getElementById('p_travaux_content').innerHTML = (data.travaux_realises || '').replace(/\n/g, '<br>');
+            document.getElementById('p_travaux_content').innerHTML = escapeHtml(data.travaux_realises || '').replace(/\n/g, '<br>');
             
             let tbody = document.getElementById('p_lignes_prestations'); tbody.innerHTML = '';
             tbody.innerHTML += `<tr><td>FHSAV-DEPAN</td><td>Forfait Horaire SAV-Depannage<br><br><span style="padding-left:15px;">${data.diagnostic || ''}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>`;
@@ -460,6 +474,21 @@
         };
 
         window.prepareAndPrint = function() {
+            // Validation des champs indispensables avant toute génération/sauvegarde
+            const fisavCheck = document.getElementById('input_fisav').value.trim();
+            const clientCheck = document.getElementById('input_client').value.trim();
+            const machineCheck = document.getElementById('input_machine').value.trim();
+            const dateCheck = document.getElementById('input_date').value;
+            const champsManquants = [];
+            if (!fisavCheck) champsManquants.push("N° FISAV");
+            if (!clientCheck) champsManquants.push("Client");
+            if (!machineCheck) champsManquants.push("Machine");
+            if (!dateCheck) champsManquants.push("Date d'intervention");
+            if (champsManquants.length > 0) {
+                alert("Veuillez remplir les champs obligatoires avant de continuer :\n- " + champsManquants.join("\n- "));
+                return;
+            }
+
             const btnGenerer = document.getElementById('btn-generate-main');
             btnGenerer.disabled = true; btnGenerer.innerText = "Génération en cours...";
 
@@ -472,11 +501,11 @@
             let heureTirage = document.getElementById('input_heure_tirage').value; document.getElementById('p_heure_tirage').innerText = heureTirage;
             let client = document.getElementById('input_client').value; document.getElementById('p_client').innerText = client;
             let machine = document.getElementById('input_machine').value; document.getElementById('p_machine').innerText = machine; document.getElementById('p_ref_machine').innerText = machine;
-            let travauxBruts = document.getElementById('input_travaux').value; document.getElementById('p_travaux_content').innerHTML = travauxBruts.replace(/\n/g, '<br>');
+            let travauxBruts = document.getElementById('input_travaux').value; document.getElementById('p_travaux_content').innerHTML = escapeHtml(travauxBruts).replace(/\n/g, '<br>');
             
             let tbody = document.getElementById('p_lignes_prestations'); tbody.innerHTML = '';
             let refForfait = document.getElementById('input_forfait_ref').value; let nomForfait = document.getElementById('input_forfait_nom').value; let diagForfait = document.getElementById('input_forfait_diag').value;
-            tbody.innerHTML += `<tr><td>FHSAV-${refForfait}</td><td>Forfait Horaire ${nomForfait}<br><br><span style="padding-left:15px;">${diagForfait}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>`;
+            tbody.innerHTML += `<tr><td>FHSAV-${escapeHtml(refForfait)}</td><td>Forfait Horaire ${escapeHtml(nomForfait)}<br><br><span style="padding-left:15px;">${escapeHtml(diagForfait)}</span></td><td></td><td style="text-align: right;">0,00</td><td style="text-align: right;">0,00</td></tr>`;
             
             let techNames = []; let detailTechniciens = []; let totalQty = 0; let currentUnit = "";
             document.querySelectorAll('.tech-row').forEach((row) => {
@@ -485,7 +514,7 @@
                 let unit = row.querySelector('.tech-qty-unit').value;
                 if (name.trim() !== '') {
                     techNames.push(name); detailTechniciens.push({ nom: name, quantite: qtyVal, unite: unit }); totalQty += qtyVal; currentUnit = unit;
-                    tbody.innerHTML += `<tr><td style="padding-top: 10px;">FHTEC-EM2</td><td style="padding-top: 10px;">Heure Technicien ${name}</td><td style="padding-top: 10px; text-align: center;">${qtyVal} ${unit === 'Heure(s)' ? 'H' : 'J'}</td><td style="padding-top: 10px; text-align: right;">0,00</td><td style="padding-top: 10px; text-align: right;">0,00</td></tr>`;
+                    tbody.innerHTML += `<tr><td style="padding-top: 10px;">FHTEC-EM2</td><td style="padding-top: 10px;">Heure Technicien ${escapeHtml(name)}</td><td style="padding-top: 10px; text-align: center;">${qtyVal} ${unit === 'Heure(s)' ? 'H' : 'J'}</td><td style="padding-top: 10px; text-align: right;">0,00</td><td style="padding-top: 10px; text-align: right;">0,00</td></tr>`;
                 }
             });
             tbody.innerHTML += `<tr><td style="height: 30px;"></td><td></td><td></td><td></td><td></td></tr>`;
